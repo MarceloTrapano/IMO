@@ -19,3 +19,14 @@ func MatrixMax(matrix [][]int) (int, int, int) {
 	}
 	return x, y, max
 }
+
+func Insert(array []int, i int, j int) []int {
+	var new_arr []int
+	for idx, val := range array {
+		if idx == i {
+			new_arr = append(new_arr, j)
+		}
+		new_arr = append(new_arr, val)
+	}
+	return new_arr
+}

@@ -9,7 +9,7 @@ import (
 
 const (
 	NumCycles int     = 2
-	Split     float64 = 0.3
+	Split     float64 = 0.5
 )
 
 func EucDist(a, b reader.Node) int {
@@ -115,8 +115,12 @@ func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 	for j := 1; order[0][len(order[0])-1] == -1 || order[1][len(order[1])-1] == -1; j++ {
 		min_1 := -1
 		min_2 := -1 // wartości najbliższych krawędzi
-		if j < len(order[0]) {order[0][j] = -1}
-		if j < len(order[1]) {order[1][j] = -1}
+		if j < len(order[0]) {
+			order[0][j] = -1
+		}
+		if j < len(order[1]) {
+			order[1][j] = -1
+		}
 		for i := range nodes {
 			if visited[i] {
 				continue // pomijanie wierzchołków dodanych
@@ -163,7 +167,81 @@ func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 }
 
 func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	// TODO
+	start_node_1, start_node_2, _ := PickFarthestNodes(distance_matrix, nodes) // wybór startowych punktów
+
+	var (
+		visited      []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków
+		cycle1       []int
+		cycle2       []int
+		new_cycle    []int
+		visit        int
+		cost         int
+		temp_cycle   []int
+		minimal_cost int
+	)
+
+	visited[start_node_1] = true
+	visited[start_node_2] = true
+
+	cycle1 = append(cycle1, start_node_1)
+	cycle2 = append(cycle2, start_node_2)
+
+	lenCycle1 := len(order[0])
+	lenCycle2 := len(order[1])
+
+	for len(cycle1) < lenCycle1 || len(cycle2) < lenCycle2 {
+		if len(cycle1) < lenCycle1 {
+			visit = -1
+			minimal_cost = -1
+			for i := range nodes {
+				if visited[i] {
+					continue
+				}
+				for j := range cycle1 {
+					temp_cycle = utils.Insert(cycle1, j, i) // musiałem sam napisać funkcję do dodwawania elementu do macierzy XD
+					cost = 0								// występowały leaki pamięci i program odpierdalał
+					for node_idx := range temp_cycle {
+						cost += distance_matrix[temp_cycle[node_idx]][temp_cycle[(node_idx+1)%len(temp_cycle)]]
+					}
+					if minimal_cost == -1 || cost < minimal_cost {
+						new_cycle = append(temp_cycle[:0:0], temp_cycle...)
+						minimal_cost = cost
+						visit = i
+					}
+				}
+			}
+			
+			cycle1 = append(new_cycle[:0:0], new_cycle...)
+			visited[visit] = true
+
+		}
+		if len(cycle2) < lenCycle2 {
+			visit = -1
+			minimal_cost = -1
+			for i := range nodes {
+				if visited[i] {
+					continue
+				}
+				for j := range cycle2 {
+					temp_cycle = utils.Insert(cycle2, j, i)
+					cost = 0
+					for node_idx := range temp_cycle {
+						cost += distance_matrix[temp_cycle[node_idx]][temp_cycle[(node_idx+1)%len(temp_cycle)]]
+					}
+					if minimal_cost == -1 || cost < minimal_cost {
+						new_cycle = append(temp_cycle[:0:0], temp_cycle...)
+						minimal_cost = cost
+						visit = i
+					}
+				}
+			}
+			cycle2 = append(new_cycle[:0:0], new_cycle...)
+			visited[visit] = true
+		}
+	}
+	order[0] = cycle1
+	order[1] = cycle2
+
 	return nil
 }
 
