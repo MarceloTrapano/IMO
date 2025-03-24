@@ -9,7 +9,7 @@ import (
 
 const (
 	NumCycles int     = 2
-	Split     float64 = 0.5
+	Split     float64 = 0.3
 )
 
 func EucDist(a, b reader.Node) int {
@@ -101,48 +101,49 @@ func InOrder(distance_matrix [][]int, order [][]int, nodes []reader.Node) error 
 }
 
 func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	start_node_1, start_node_2, _ := PickRandomClosestNodes(distance_matrix, nodes)
+	start_node_1, start_node_2, _ := PickRandomClosestNodes(distance_matrix, nodes) // wybór startowych punktów
 
 	order[0][len(order[0])-1] = -1
-	order[1][len(order[1])-1] = -1
+	order[1][len(order[1])-1] = -1 // znakowanie końca tablic order
 	order[0][0] = start_node_1
-	order[1][0] = start_node_2
-	var visited []bool = make([]bool, len(nodes))
+	order[1][0] = start_node_2 // przypisywanie pierwszych wierzchołków
+
+	var visited []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków
 
 	visited[start_node_1] = true
 	visited[start_node_2] = true
-	for j := 1; order[0][len(order[0])-1] == -1 || order[1][len(order[0])-1] == -1; j++ {
+	for j := 1; order[0][len(order[0])-1] == -1 || order[1][len(order[1])-1] == -1; j++ {
 		min_1 := -1
-		min_2 := -1
-		order[0][j] = -1
-		order[1][j] = -1
+		min_2 := -1 // wartości najbliższych krawędzi
+		if j < len(order[0]) {order[0][j] = -1}
+		if j < len(order[1]) {order[1][j] = -1}
 		for i := range nodes {
 			if visited[i] {
-				continue
+				continue // pomijanie wierzchołków dodanych
 			}
 
-			if j > len(order[0]) {
+			if j >= len(order[0]) { // po osiągnięciu maksymalnej długości na jednycm cyklu resztę sąsiadów szuka dla jednego cyklu
 				order2_nn := distance_matrix[i][order[1][j-1]]
 				if min_2 == -1 || order2_nn < min_2 {
 					min_2 = order2_nn
 					order[1][j] = i
-					continue
 				}
+				continue
 			}
-			if j > len(order[1]) {
+			if j >= len(order[1]) {
 				order1_nn := distance_matrix[i][order[0][j-1]]
 				if min_1 == -1 || order1_nn < min_1 {
 					min_1 = order1_nn
 					order[0][j] = i
-					continue
 				}
+				continue
 			}
 			order1_nn := distance_matrix[i][order[0][j-1]]
 			order2_nn := distance_matrix[i][order[1][j-1]]
 			if min_1 == -1 || (order1_nn < min_1) {
 				min_1 = order1_nn
 				order[0][j] = i
-				if order[1][j] != -1 {
+				if order[1][j] != -1 { // warunek sprawdzający czy drugi cykl ma przypisaną wartość
 					continue
 				}
 			}
@@ -151,10 +152,10 @@ func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 				order[1][j] = i
 			}
 		}
-		if j <= len(order[0]) {
+		if j < len(order[0]) {
 			visited[order[0][j]] = true
 		}
-		if j <= len(order[1]) {
+		if j < len(order[1]) {
 			visited[order[1][j]] = true
 		}
 	}
