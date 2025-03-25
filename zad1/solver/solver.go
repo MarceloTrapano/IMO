@@ -1,6 +1,7 @@
 package solver
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"zad1/reader"
@@ -21,10 +22,12 @@ func EucDist(a, b reader.Node) int {
 		), // fajna opcja żeby lepszą czytelność mieć ale śmieszne, że przecinki się daje przed nową linią żeby dobrze parsował kompilator
 	)
 }
+
 func PickFarthestNodes(distance_matrix [][]int, nodes []reader.Node) (int, int, error) {
 	x, y, _ := utils.MatrixMax(distance_matrix)
 	return x, y, nil
 }
+
 func PickRandomNodes(nodes []reader.Node) (int, int, error) {
 	node1 := rand.Intn(len(nodes))
 	node2 := node1
@@ -33,6 +36,24 @@ func PickRandomNodes(nodes []reader.Node) (int, int, error) {
 	}
 	return node1, node2, nil
 }
+
+func PickRandomNode(nodes []reader.Node) (int, error) {
+	node1 := rand.Intn(len(nodes))
+	return node1, nil
+}
+
+func PickRandomFarthest(distance_matrix [][]int, nodes []reader.Node, visited []bool) (int, int, error) {
+	node1, err := PickRandomNode(nodes)
+	if err != nil {
+		return -1, -1, err
+	}
+	node2, err := utils.FarthestNode(nodes, distance_matrix, node1, visited)
+	if err != nil {
+		return -1, -1, err
+	}
+	return node1, node2, nil
+}
+
 func PickRandomClosestNodes(distance_matrix [][]int, nodes []reader.Node) (int, int, error) {
 	idx := rand.Intn(len(nodes))
 	node_val := 10000
@@ -47,6 +68,22 @@ func PickRandomClosestNodes(distance_matrix [][]int, nodes []reader.Node) (int, 
 		}
 	}
 	return idx, node2_idx, nil
+}
+
+func ValidateOrder(order [][]int, nodes []reader.Node) error {
+	var visited []bool = make([]bool, len(nodes))
+	if len(order[0])+len(order[1]) < len(nodes) {
+		return fmt.Errorf("not all nodes visited")
+	}
+	for i := range order {
+		for j := range order[i] {
+			if visited[order[i][j]] {
+				return fmt.Errorf("node %v visited more than once", order[i][j])
+			}
+			visited[order[i][j]] = true
+		}
+	}
+	return nil
 }
 
 // zwraca kolejnych indeksów wierzchołków z nodes w kolejności odwiedzania w cyklu
@@ -84,6 +121,10 @@ func Solve(nodes []reader.Node, algorithm string) ([][]int, error) {
 	err := f(distance_matrix, order, nodes)
 	if err != nil {
 		return nil, err
+	}
+	err = ValidateOrder(order, nodes)
+	if err != nil {
+		return order, err
 	}
 	return order, nil
 }
@@ -144,14 +185,17 @@ func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 			}
 			order1_nn := distance_matrix[i][order[0][j-1]]
 			order2_nn := distance_matrix[i][order[1][j-1]]
-			if min_1 == -1 || (order1_nn < min_1) {
+			switch {
+			case min_1 == -1:
 				min_1 = order1_nn
 				order[0][j] = i
-				if order[1][j] != -1 { // warunek sprawdzający czy drugi cykl ma przypisaną wartość
-					continue
-				}
-			}
-			if min_2 == -1 || (order2_nn < min_2) {
+			case min_2 == -1:
+				min_2 = order2_nn
+				order[1][j] = i
+			case order1_nn < min_1:
+				min_1 = order1_nn
+				order[0][j] = i
+			case order2_nn < min_2:
 				min_2 = order2_nn
 				order[1][j] = i
 			}
@@ -199,7 +243,7 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 				}
 				for j := range cycle1 {
 					temp_cycle = utils.Insert(cycle1, j, i) // musiałem sam napisać funkcję do dodwawania elementu do macierzy XD
-					cost = 0								// występowały leaki pamięci i program odpierdalał
+					cost = 0                                // występowały leaki pamięci i program odpierdalał
 					for node_idx := range temp_cycle {
 						cost += distance_matrix[temp_cycle[node_idx]][temp_cycle[(node_idx+1)%len(temp_cycle)]]
 					}
@@ -210,7 +254,7 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 					}
 				}
 			}
-			
+
 			cycle1 = append(new_cycle[:0:0], new_cycle...)
 			visited[visit] = true
 
@@ -246,6 +290,45 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 }
 
 func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	// TODO
+	var (
+		visited   []bool                  = make([]bool, len(nodes))                  // tablica dodanych wierzchołków
+		cycles    []*utils.Edge           = make([]*utils.Edge, NumCycles)            // cykle krawędzi
+		distances []*utils.EdgeLinkedList = make([]*utils.EdgeLinkedList, len(nodes)) // tablica linked list z dystansami do krawędzi
+		edges     []utils.Edge                                                        // tablica wszystkich krawędzi
+	)
+
+	start_node_1, start_node_2, _ := PickRandomFarthest(distance_matrix, nodes, visited) // wybór startowych punktów
+
+	visited[start_node_1] = true
+	visited[start_node_2] = true
+
+	// stworzenie pierwszych krawędzi na podstawie najbliższych sąsiadów
+	nearest1, err := utils.NearestNode(nodes, distance_matrix, start_node_1, visited)
+	if err != nil {
+		return err
+	}
+	visited[nearest1] = true
+	nearest2, err := utils.NearestNode(nodes, distance_matrix, start_node_2, visited)
+	if err != nil {
+		return err
+	}
+	visited[nearest2] = true
+
+	edge1 := utils.NewEdge(start_node_1, nearest1, distance_matrix, nil, nil)
+	edge2 := utils.NewEdge(start_node_2, nearest2, distance_matrix, nil, nil)
+	edges = append(edges, edge1, edge2)
+	cycles[0] = &edge1
+	cycles[1] = &edge2
+
+	// aktualizacja dystansów
+	for i := range distances {
+		if visited[i] {
+			continue
+		}
+		distances[i] = &utils.EdgeLinkedList{Edge: 0, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, i, &edges[0])}
+		newEdges := []utils.EdgeLinkedList{{Edge: 1, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, i, &edges[1])}}
+		distances[i] = utils.UpdateDistances(distances[i], distance_matrix, newEdges, false)
+	}
+
 	return nil
 }
