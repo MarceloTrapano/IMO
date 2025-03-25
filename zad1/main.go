@@ -70,11 +70,11 @@ func main() {
 			worst_score = results[0][i] + results[1][i]
 			worst_order = append(order[:0:0], order...)
 		}
-
-		solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes}
-
-		finalJson, _ := json.MarshalIndent(solution, "", "\t")
-
-		os.WriteFile("res_GC_LPS_100_kroA200.json", finalJson, 0644)
 	}
+
+	solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes}
+
+	finalJson, _ := json.MarshalIndent(solution, "", "\t")
+
+	os.WriteFile("res_GC_LPS_100_kroA200.json", finalJson, 0644)
 }
