@@ -167,7 +167,7 @@ func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 }
 
 func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	start_node_1, start_node_2, _ := PickFarthestNodes(distance_matrix, nodes) // wybór startowych punktów
+	start_node_1, start_node_2, _ := PickRandomNodes(nodes) // wybór startowych punktów
 
 	var (
 		visited      []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków

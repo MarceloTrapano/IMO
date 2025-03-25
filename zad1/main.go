@@ -6,11 +6,14 @@ import (
 	"os"
 	"zad1/reader"
 	"zad1/solver"
+	"zad1/utils"
 )
 
-type Soltution struct {
-	Order [][]int         `json:"order"`
-	Nodes []reader.Node `json:"unordered nodes"`
+type Solution struct {
+	Result      [][]int       `json:"result"`
+	Worst_Order [][]int       `json:"worst order"`
+	Best_Order  [][]int       `json:"best order"`
+	Nodes       []reader.Node `json:"unordered nodes"`
 }
 
 // użycie: go run main.go <ścieżka_do_instancji> [algorytm]
@@ -32,17 +35,46 @@ func main() {
 	fmt.Println(nodes)
 	fmt.Println(headers)
 
-	order, err := solver.Solve(nodes, algorithm)
-	if err != nil {
-		fmt.Println(err)
-		return
+	var (
+		distance_matrix [][]int = make([][]int, len(nodes))
+		results         [][]int = make([][]int, 2)
+	)
+	num_of_rep := 100
+	for i := range distance_matrix {
+		distance_matrix[i] = make([]int, len(nodes))
+		for j := range distance_matrix[i] {
+			distance_matrix[i][j] = solver.EucDist(nodes[i], nodes[j])
+		}
+	}
+	results[0] = make([]int, num_of_rep)
+	results[1] = make([]int, num_of_rep)
+	var (
+		best_order  [][]int
+		worst_order [][]int
+	)
+	best_score := -1
+	worst_score := -1
+	for i := 0; i < num_of_rep; i++ {
+		order, err := solver.Solve(nodes, algorithm)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		results[0][i] = utils.CalculateCycleLen(order[0], distance_matrix)
+		results[1][i] = utils.CalculateCycleLen(order[1], distance_matrix)
+		if results[0][i]+results[1][i] > best_score{
+			best_score = results[0][i]+results[1][i]
+			best_order = append(order[:0:0], order...)
+		}
+		if worst_score == -1 || results[0][i]+results[1][i] < worst_score{
+			worst_score = results[0][i]+results[1][i]
+			worst_order = append(order[:0:0], order...)
+		}
 	}
 
-	fmt.Println(order)
-
-	solution := Soltution{Order: order, Nodes: nodes}
+	solution := Solution{Result:results, Worst_Order:worst_order, Best_Order:best_order, Nodes:nodes}
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("sol_kroA200.json", finalJson, 0644)
+	os.WriteFile("res_GC_LPS_100_kroA200.json", finalJson, 0644)
 }

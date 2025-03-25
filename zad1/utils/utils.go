@@ -30,3 +30,11 @@ func Insert(array []int, i int, j int) []int {
 	}
 	return new_arr
 }
+
+func CalculateCycleLen(order []int, distance_matrix [][]int) (int){
+	cost := 0
+	for i := range(order){
+		cost += distance_matrix[order[i]][order[(i+1)%len(order)]] 
+	}
+	return cost
+}
