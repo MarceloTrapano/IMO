@@ -88,18 +88,18 @@ func EdgeToNodeCycle(edge *Edge) []int {
 }
 
 func UpdateDistances(eLL *EdgeLinkedList, distance_matrix [][]int, delEdges []int, newEdges []EdgeLinkedList, newEdgesSorted bool) *EdgeLinkedList {
-	e := len(delEdges)
+	var remainingDelete int = len(delEdges)
 	if !newEdgesSorted {
 		// sortuje rosnąco - chcemy malejąco (najlepsze na końcu) więc przeciwnie: j-i zamiast i-j
 		slices.SortFunc(newEdges, func(i, j EdgeLinkedList) int {
 			return j.Value - i.Value
 		})
 	}
-	for eLL != nil && (len(newEdges) > 0 || e > 0) {
+	for eLL != nil && (len(newEdges) > 0 || remainingDelete > 0) {
 		// usuń krawędzie
 		for i, delEdge := range delEdges {
 			if eLL.Edge == delEdge {
-				e--
+				remainingDelete--
 				switch {
 				case eLL.Prev == nil && eLL.Next == nil && len(newEdges) > 0: // jedyny element
 					eLL = &newEdges[len(newEdges)-1]
@@ -126,11 +126,8 @@ func UpdateDistances(eLL *EdgeLinkedList, distance_matrix [][]int, delEdges []in
 		}
 
 		if len(newEdges) > 0 {
-			i := len(newEdges) - 1
-			edge := &newEdges[i]
-			if len(delEdges) > 0 && eLL.Edge == delEdges[0] {
-				panic("aha")
-			}
+			last := len(newEdges) - 1
+			edge := &newEdges[last]
 			switch {
 			case edge.Value < eLL.Value: // lepszy niż aktualny - dodaj przed (aktualizacja wskaźnika dla poprzedniego, teraz ten jest aktualnie rozważany)
 				prev := eLL.Prev
@@ -141,11 +138,11 @@ func UpdateDistances(eLL *EdgeLinkedList, distance_matrix [][]int, delEdges []in
 				edge.Next = eLL
 				eLL.Prev = edge
 				eLL = edge
-				newEdges = newEdges[:i]
+				newEdges = newEdges[:last]
 			case eLL.Next == nil: // koniec listy - dodaj na końcu; && edge.Value >= eLL.Value pominięte
 				edge.Prev = eLL
 				eLL.Next = edge
-				newEdges = newEdges[:i]
+				newEdges = newEdges[:last]
 			default: // gorszy niż aktulany - szukaj dalej; edge.Value >= eLL.Value pominięte
 				eLL = eLL.Next
 			}
@@ -154,9 +151,6 @@ func UpdateDistances(eLL *EdgeLinkedList, distance_matrix [][]int, delEdges []in
 		} else {
 			break
 		}
-	}
-	if eLL == nil {
-		panic("eLL is nil")
 	}
 	for eLL.Prev != nil {
 		eLL = eLL.Prev

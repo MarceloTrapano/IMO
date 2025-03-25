@@ -369,17 +369,17 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	for lenCycles[0] < len(order[0]) || lenCycles[1] < len(order[1]) { // krawędzi będzie o 2 mniej niż wierzchołków
 		// dla każdego cyklu
 		for i := 0; i < NumCycles; i++ {
-			var max_nodes int = len(order[i])
+			var (
+				max_nodes      int = len(order[i])
+				max_regret     int = math.MinInt64
+				max_regret_idx int
+			)
 			// cykl jest ukończony
 			if lenCycles[i] == max_nodes {
 				continue
 			}
 			// obliczanie żalu
 			regrets := ComputeRegrets(distances[i], visited, 2)
-			var (
-				max_regret     int = math.MinInt64
-				max_regret_idx int
-			)
 			for i, regret := range regrets {
 				if regret > max_regret {
 					max_regret = regret
@@ -387,7 +387,7 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 				}
 			}
 			var (
-				best_edge_idx int         = distances[i][max_regret_idx].Edge
+				best_edge_idx int         = distances[i][max_regret_idx].Edge // posortowane rosnąco (UpdateDistances co iterację) także pierwsza jest najlepsza
 				best_edge     *utils.Edge = edges[best_edge_idx]
 				delEdges      []int
 				newEdges      []utils.EdgeLinkedList
@@ -401,17 +401,17 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 			// dodanie krawędzi
 			edges = append(edges, e1, e2)
 			// aktualizacja cyklu - edges i cycles mają wskaźniki na te same krawędzie
-			if lenCycles[i] <= 2 {
+			if lenCycles[i] <= 2 { // pierwsze dodanie wierzchołka - dodajemy 2 krawędzie, stara zostaje
 				best_edge.Prev = e2
 				best_edge.Next = e1
 				e1.Prev = best_edge
 				e2.Next = best_edge
-				e1.From = best_edge.To
+				e1.From = best_edge.To // to jest trochę nieintuicyjne, bez rozrysowania ciężko mi było i się męczyłem :|
 				e2.To = best_edge.From
 				e1.Length = distance_matrix[e1.From][e1.To]
 				e2.Length = distance_matrix[e2.From][e2.To]
 				best_edge_idx = -1 // by nie usuwać w tej iteracji krawędzi
-			} else {
+			} else { // kolejne dodanie wierzchołka - dodajemy 2 krawędzie, stara odpada
 				best_edge.Prev.Next = e1
 				best_edge.Next.Prev = e2
 				if best_edge == cycles[i] {
@@ -432,15 +432,6 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 
 				delEdges = []int{best_edge_idx}
 				distances[i][j] = utils.UpdateDistances(distances[i][j], distance_matrix, delEdges, newEdges, false)
-				for dist := distances[i][j]; dist != nil; dist = dist.Next {
-					if len(delEdges) > 0 && dist.Edge == delEdges[0] {
-						panic("ehe")
-					}
-				}
-				if distances[i][j] == nil {
-					fmt.Println("distances[i][j] == nil")
-					panic("distances[i][j] == nil")
-				}
 			}
 
 			// aktualizacja tablic
