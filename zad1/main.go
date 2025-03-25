@@ -62,19 +62,19 @@ func main() {
 		}
 		results[0][i] = utils.CalculateCycleLen(order[0], distance_matrix)
 		results[1][i] = utils.CalculateCycleLen(order[1], distance_matrix)
-		if results[0][i]+results[1][i] > best_score {
-			best_score = results[0][i] + results[1][i]
-			best_order = append(order[:0:0], order...)
-		}
-		if worst_score == -1 || results[0][i]+results[1][i] < worst_score {
+		if results[0][i]+results[1][i] > worst_score {
 			worst_score = results[0][i] + results[1][i]
 			worst_order = append(order[:0:0], order...)
+		}
+		if best_score == -1 || results[0][i]+results[1][i] < best_score {
+			best_score = results[0][i] + results[1][i]
+			best_order = append(order[:0:0], order...)
 		}
 
 		solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes}
 
 		finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-		os.WriteFile("res_GC_LPS_100_kroA200.json", finalJson, 0644)
+		os.WriteFile("test_zal.json", finalJson, 0644)
 	}
 }
