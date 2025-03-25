@@ -292,8 +292,14 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 func ComputeRegrets(distances []*utils.EdgeLinkedList, visited []bool, degree int) []int {
 	var (
 		regrets []int = make([]int, len(distances))
-		oneEdge bool  = distances[0].Next == nil // czy tylko 1 krawędzi; dla każdego wierzchołka to samo bo każdy tak samo długie listy - l. krawędzi
+		oneEdge bool  // czy tylko 1 krawędzi; dla każdego wierzchołka to samo bo każdy tak samo długie listy - l. krawędzi
 	)
+	for i := range visited {
+		if !visited[i] {
+			oneEdge = distances[i].Next == nil
+			break
+		}
+	}
 	for i := range distances {
 		var current_reg int = 1
 		if visited[i] {
@@ -311,7 +317,6 @@ func ComputeRegrets(distances []*utils.EdgeLinkedList, visited []bool, degree in
 			current_reg++
 			current = current.Next
 		}
-
 	}
 	return regrets
 }
@@ -369,6 +374,16 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	for lenCycles[0] < len(order[0]) || lenCycles[1] < len(order[1]) { // krawędzi będzie o 2 mniej niż wierzchołków
 		// dla każdego cyklu
 		for i := 0; i < NumCycles; i++ {
+			c1 := 0
+			c2 := 0
+			start := cycles[i].Next != nil
+			if cycles[i] != nil && start {
+				first := cycles[i].From
+				for i := cycles[i]; i.To != first; i = i.Next {
+					c1++
+				}
+				c1++
+			}
 			var (
 				max_nodes      int = len(order[i])
 				max_regret     int = math.MinInt64
@@ -381,7 +396,7 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 			// obliczanie żalu
 			regrets := ComputeRegrets(distances[i], visited, 2)
 			for i, regret := range regrets {
-				if regret > max_regret {
+				if !visited[i] && regret > max_regret {
 					max_regret = regret
 					max_regret_idx = i
 				}
@@ -420,6 +435,7 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 				best_edge = nil
 			}
 
+			visited[max_regret_idx] = true
 			// aktualizacja dystansów
 			for j := range distances[i] {
 				if visited[j] {
@@ -436,9 +452,38 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 
 			// aktualizacja tablic
 			edges = append(edges, e1, e2)
-			visited[max_regret_idx] = true
+			// visited[max_regret_idx] = true
 			lenCycles[i]++
+			if cycles[i] != nil && start {
+				first := cycles[i].From
+				for i := cycles[i]; i.To != first; i = i.Next {
+					c2++
+				}
+				if c1 != c2 {
+					fmt.Printf("c1 %v c2 %v\n", c1, c2)
+					fmt.Printf("ERROR iter %v\n", lenCycles[i])
+					fmt.Println(cycles[0])
+					fmt.Printf("max_regret_idx %v\n", max_regret_idx)
+					fmt.Printf("best_edge_idx %v\n", best_edge_idx)
+
+				}
+			}
 		}
+		c1 := 0
+		c2 := 0
+		first := cycles[0].From
+		for i := cycles[0]; i.To != first; i = i.Next {
+			c1++
+		}
+		first = cycles[1].From
+		for i := cycles[1]; i.To != first; i = i.Next {
+			c2++
+		}
+		if c1+1 != lenCycles[0] || c2+1 != lenCycles[1] {
+			fmt.Println("ERROR")
+		}
+		// fmt.Println(c1+1, c2+1)
+		// fmt.Println(lenCycles[0], lenCycles[1])
 	}
 	order[0] = utils.EdgeToNodeCycle(cycles[0])
 	order[1] = utils.EdgeToNodeCycle(cycles[1])
