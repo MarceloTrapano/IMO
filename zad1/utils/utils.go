@@ -38,8 +38,27 @@ func (eLL *EdgeLinkedList) String() string {
 	return buf.String()
 }
 
-func NewEdge(from int, to int, distance_matrix [][]int, next *Edge, prev *Edge) Edge {
-	return Edge{
+func (edge *Edge) String() string {
+	var buf bytes.Buffer
+	var first int = edge.From
+	buf.WriteString("{")
+	for edge != nil {
+		buf.WriteString(fmt.Sprintf("(%v -> %v): %v", edge.From, edge.To, edge.Length))
+		if edge.Next != nil && edge.To != first {
+			buf.WriteString(", ")
+		}
+		if edge.To == first {
+			break
+		}
+		edge = edge.Next
+	}
+
+	buf.WriteString("}")
+	return buf.String()
+}
+
+func NewEdge(from int, to int, distance_matrix [][]int, prev *Edge, next *Edge) *Edge {
+	return &Edge{
 		From:   from,
 		To:     to,
 		Prev:   prev,
@@ -53,18 +72,65 @@ func EdgeInsertValue(distance_matrix [][]int, node int, edge *Edge) int {
 	return distance_matrix[node][edge.To] + distance_matrix[node][edge.From] - edge.Length
 }
 
-func UpdateDistances(eLL *EdgeLinkedList, distance_matrix [][]int, newEdges []EdgeLinkedList, newEdgesSorted bool) *EdgeLinkedList {
+func EdgeToNodeCycle(edge *Edge) []int {
+	var (
+		cycle []int
+		first int = edge.From
+	)
+	for {
+		cycle = append(cycle, edge.From)
+		edge = edge.Next
+		if edge.From == first {
+			break
+		}
+	}
+	return cycle
+}
+
+func UpdateDistances(eLL *EdgeLinkedList, distance_matrix [][]int, delEdges []int, newEdges []EdgeLinkedList, newEdgesSorted bool) *EdgeLinkedList {
+	e := len(delEdges)
 	if !newEdgesSorted {
 		// sortuje rosnąco - chcemy malejąco (najlepsze na końcu) więc przeciwnie: j-i zamiast i-j
 		slices.SortFunc(newEdges, func(i, j EdgeLinkedList) int {
 			return j.Value - i.Value
 		})
 	}
-	fmt.Println("")
-	for eLL != nil && len(newEdges) > 0 {
-		fmt.Println(eLL)
-		for i := len(newEdges) - 1; i >= 0; i-- {
+	for eLL != nil && (len(newEdges) > 0 || e > 0) {
+		// usuń krawędzie
+		for i, delEdge := range delEdges {
+			if eLL.Edge == delEdge {
+				e--
+				switch {
+				case eLL.Prev == nil && eLL.Next == nil && len(newEdges) > 0: // jedyny element
+					eLL = &newEdges[len(newEdges)-1]
+					newEdges = newEdges[:len(newEdges)-1]
+				case eLL.Prev == nil: // pierwszy element
+					eLL = eLL.Next
+					eLL.Prev = nil
+				case eLL.Next == nil && len(newEdges) > 0: // ostatni element
+					eLL.Prev.Next = &newEdges[len(newEdges)-1]
+					newEdges = newEdges[:len(newEdges)-1]
+					eLL = eLL.Prev.Next
+				case eLL.Next != nil && eLL.Prev != nil: //  w środku
+					eLL.Prev.Next = eLL.Next
+					eLL.Next.Prev = eLL.Prev
+					eLL = eLL.Next
+				case eLL.Next == nil && eLL.Prev != nil: // przedostatni element
+					eLL.Prev.Next = nil
+					eLL = eLL.Prev
+				default: // brak krawędzi do dodania w zamian
+					return nil
+				}
+				delEdges[i] = -1
+			}
+		}
+
+		if len(newEdges) > 0 {
+			i := len(newEdges) - 1
 			edge := &newEdges[i]
+			if len(delEdges) > 0 && eLL.Edge == delEdges[0] {
+				panic("aha")
+			}
 			switch {
 			case edge.Value < eLL.Value: // lepszy niż aktualny - dodaj przed (aktualizacja wskaźnika dla poprzedniego, teraz ten jest aktualnie rozważany)
 				prev := eLL.Prev
@@ -77,15 +143,20 @@ func UpdateDistances(eLL *EdgeLinkedList, distance_matrix [][]int, newEdges []Ed
 				eLL = edge
 				newEdges = newEdges[:i]
 			case eLL.Next == nil: // koniec listy - dodaj na końcu; && edge.Value >= eLL.Value pominięte
-				fmt.Println("koniec")
 				edge.Prev = eLL
 				eLL.Next = edge
 				newEdges = newEdges[:i]
 			default: // gorszy niż aktulany - szukaj dalej; edge.Value >= eLL.Value pominięte
 				eLL = eLL.Next
 			}
+		} else if eLL != nil && eLL.Next != nil {
+			eLL = eLL.Next
+		} else {
+			break
 		}
-		fmt.Println(eLL, eLL.Prev, eLL.Next)
+	}
+	if eLL == nil {
+		panic("eLL is nil")
 	}
 	for eLL.Prev != nil {
 		eLL = eLL.Prev

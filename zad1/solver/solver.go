@@ -289,14 +289,45 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 	return nil
 }
 
+func ComputeRegrets(distances []*utils.EdgeLinkedList, visited []bool, degree int) []int {
+	var (
+		regrets []int = make([]int, len(distances))
+		oneEdge bool  = distances[0].Next == nil // czy tylko 1 krawędzi; dla każdego wierzchołka to samo bo każdy tak samo długie listy - l. krawędzi
+	)
+	for i := range distances {
+		var current_reg int = 1
+		if visited[i] {
+			continue
+		}
+		var current *utils.EdgeLinkedList = distances[i]
+		var first_value int = current.Value
+		if oneEdge { // gdyby była jedna krawędź - nie ma sensu liczyć żalu zamiast tego po prostu wzrost długości
+			regrets[i] = first_value
+			continue
+		}
+
+		for current_reg < degree && current.Next != nil { // liczenie kolejnych żali
+			regrets[i] += current.Next.Value - first_value // kolejne krawędzie mają większe wartości
+			current_reg++
+			current = current.Next
+		}
+
+	}
+	return regrets
+}
+
 func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	var (
-		visited   []bool                  = make([]bool, len(nodes))                  // tablica dodanych wierzchołków
-		cycles    []*utils.Edge           = make([]*utils.Edge, NumCycles)            // cykle krawędzi
-		distances []*utils.EdgeLinkedList = make([]*utils.EdgeLinkedList, len(nodes)) // tablica linked list z dystansami do krawędzi
-		edges     []utils.Edge                                                        // tablica wszystkich krawędzi
+		visited   []bool                    = make([]bool, len(nodes))                   // tablica dodanych wierzchołków
+		cycles    []*utils.Edge             = make([]*utils.Edge, NumCycles)             // cykle krawędzi
+		distances [][]*utils.EdgeLinkedList = make([][]*utils.EdgeLinkedList, NumCycles) // tablica linked list z dystansami do krawędzi dla każdego cyklu i każdego wierzchołka
+		edges     []*utils.Edge                                                          // tablica wszystkich krawędzi
+		lenCycles []int                     = make([]int, NumCycles)                     // długości cykli w wierzchołkach
 	)
-
+	// przygotowanie tablicy dystansów
+	for i := range distances {
+		distances[i] = make([]*utils.EdgeLinkedList, len(nodes))
+	}
 	start_node_1, start_node_2, _ := PickRandomFarthest(distance_matrix, nodes, visited) // wybór startowych punktów
 
 	visited[start_node_1] = true
@@ -316,19 +347,110 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 
 	edge1 := utils.NewEdge(start_node_1, nearest1, distance_matrix, nil, nil)
 	edge2 := utils.NewEdge(start_node_2, nearest2, distance_matrix, nil, nil)
-	edges = append(edges, edge1, edge2)
-	cycles[0] = &edge1
-	cycles[1] = &edge2
+	cycles[0] = edge1
+	cycles[1] = edge2
+	lenCycles[0] = 2
+	lenCycles[1] = 2
 
-	// aktualizacja dystansów
-	for i := range distances {
+	// aktualizacja początkowych dystansów
+	for i := 0; i < len(nodes); i++ {
 		if visited[i] {
 			continue
 		}
-		distances[i] = &utils.EdgeLinkedList{Edge: 0, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, i, &edges[0])}
-		newEdges := []utils.EdgeLinkedList{{Edge: 1, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, i, &edges[1])}}
-		distances[i] = utils.UpdateDistances(distances[i], distance_matrix, newEdges, false)
+		distances[0][i] = &utils.EdgeLinkedList{Edge: 0, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, i, edge1)}
+		distances[1][i] = &utils.EdgeLinkedList{Edge: 1, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, i, edge2)}
+		// newEdges := []utils.EdgeLinkedList{{Edge: 1, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, i, &edges[1])}}
+		// distances[0][i] = utils.UpdateDistances(distances[0][i], distance_matrix, nil, newEdges, false)
 	}
+	edges = append(edges, edge1, edge2)
+
+	// dodawanie wierzchołków - rozpatrujemy żal dla każdej krawędzi w cyklu i pozostałego wierzchołka dla każdego cyklu osobno
+	// dopóki nie dodamy wszystkich wierzchołków
+	for lenCycles[0] < len(order[0]) || lenCycles[1] < len(order[1]) { // krawędzi będzie o 2 mniej niż wierzchołków
+		// dla każdego cyklu
+		for i := 0; i < NumCycles; i++ {
+			var max_nodes int = len(order[i])
+			// cykl jest ukończony
+			if lenCycles[i] == max_nodes {
+				continue
+			}
+			// obliczanie żalu
+			regrets := ComputeRegrets(distances[i], visited, 2)
+			var (
+				max_regret     int = math.MinInt64
+				max_regret_idx int
+			)
+			for i, regret := range regrets {
+				if regret > max_regret {
+					max_regret = regret
+					max_regret_idx = i
+				}
+			}
+			var (
+				best_edge_idx int         = distances[i][max_regret_idx].Edge
+				best_edge     *utils.Edge = edges[best_edge_idx]
+				delEdges      []int
+				newEdges      []utils.EdgeLinkedList
+			)
+
+			// tworzenie nowych krawędzi
+			e1 := utils.NewEdge(best_edge.From, max_regret_idx, distance_matrix, best_edge.Prev, nil)
+			e2 := utils.NewEdge(max_regret_idx, best_edge.To, distance_matrix, e1, best_edge.Next) // niepowtarzające się indeksy na poziomie cyklu
+			e1.Next = e2
+
+			// dodanie krawędzi
+			edges = append(edges, e1, e2)
+			// aktualizacja cyklu - edges i cycles mają wskaźniki na te same krawędzie
+			if lenCycles[i] <= 2 {
+				best_edge.Prev = e2
+				best_edge.Next = e1
+				e1.Prev = best_edge
+				e2.Next = best_edge
+				e1.From = best_edge.To
+				e2.To = best_edge.From
+				e1.Length = distance_matrix[e1.From][e1.To]
+				e2.Length = distance_matrix[e2.From][e2.To]
+				best_edge_idx = -1 // by nie usuwać w tej iteracji krawędzi
+			} else {
+				best_edge.Prev.Next = e1
+				best_edge.Next.Prev = e2
+				if best_edge == cycles[i] {
+					cycles[i] = e1
+				}
+				best_edge = nil
+			}
+
+			// aktualizacja dystansów
+			for j := range distances[i] {
+				if visited[j] {
+					continue
+				}
+				newEdges = []utils.EdgeLinkedList{
+					{Edge: len(edges), Next: nil, Value: utils.EdgeInsertValue(distance_matrix, j, e1)},
+					{Edge: len(edges) + 1, Next: nil, Value: utils.EdgeInsertValue(distance_matrix, j, e2)},
+				}
+
+				delEdges = []int{best_edge_idx}
+				distances[i][j] = utils.UpdateDistances(distances[i][j], distance_matrix, delEdges, newEdges, false)
+				for dist := distances[i][j]; dist != nil; dist = dist.Next {
+					if len(delEdges) > 0 && dist.Edge == delEdges[0] {
+						panic("ehe")
+					}
+				}
+				if distances[i][j] == nil {
+					fmt.Println("distances[i][j] == nil")
+					panic("distances[i][j] == nil")
+				}
+			}
+
+			// aktualizacja tablic
+			edges = append(edges, e1, e2)
+			visited[max_regret_idx] = true
+			lenCycles[i]++
+		}
+	}
+	order[0] = utils.EdgeToNodeCycle(cycles[0])
+	order[1] = utils.EdgeToNodeCycle(cycles[1])
 
 	return nil
 }
