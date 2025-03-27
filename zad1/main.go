@@ -39,7 +39,7 @@ func main() {
 		distance_matrix [][]int = make([][]int, len(nodes))
 		results         [][]int = make([][]int, 2)
 	)
-	num_of_rep := 100
+	num_of_rep := 10
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
@@ -55,6 +55,7 @@ func main() {
 	best_score := -1
 	worst_score := -1
 	for i := 0; i < num_of_rep; i++ {
+		fmt.Printf("Trial: %d\n",i+1)
 		order, err := solver.Solve(nodes, algorithm)
 		if err != nil {
 			fmt.Println(err)
@@ -76,5 +77,5 @@ func main() {
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("res_GC_LPS_100_kroA200.json", finalJson, 0644)
+	os.WriteFile("res_WREG_Rand_10_testkroA200.json", finalJson, 0644)
 }

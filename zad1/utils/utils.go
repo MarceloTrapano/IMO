@@ -187,7 +187,17 @@ func Insert(array []int, i int, j int) []int {
 	}
 	return new_arr
 }
-
+func MaxOfArray(arr []int) (int, int, error){
+	idx := -1
+	max := -1
+    for i, value := range(arr) {
+        if value > max {
+            max = value
+			idx = i
+        }
+    }
+    return max, idx, nil
+}
 func CalculateCycleLen(order []int, distance_matrix [][]int) int {
 	cost := 0
 	for i := range order {
