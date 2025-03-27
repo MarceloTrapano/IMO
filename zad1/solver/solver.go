@@ -42,8 +42,10 @@ func PickRandomNode(nodes []reader.Node) (int, error) {
 	return node1, nil
 }
 
-func PickRandomFarthest(distance_matrix [][]int, nodes []reader.Node, visited []bool) (int, int, error) {
+func PickRandomFarthest(distance_matrix [][]int, nodes []reader.Node) (int, int, error) {
+	visited := make([]bool, len(nodes))
 	node1, err := PickRandomNode(nodes)
+	visited[node1] = true
 	if err != nil {
 		return -1, -1, err
 	}
@@ -114,6 +116,8 @@ func Solve(nodes []reader.Node, algorithm string) ([][]int, error) {
 		f = GreedyCycle
 	case "reg": // regret - żal
 		f = Regret
+	case "wreg":
+		f = WeightedRegret
 	default:
 		f = InOrder
 	}
@@ -142,7 +146,7 @@ func InOrder(distance_matrix [][]int, order [][]int, nodes []reader.Node) error 
 }
 
 func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	start_node_1, start_node_2, _ := PickRandomClosestNodes(distance_matrix, nodes) // wybór startowych punktów
+	start_node_1, start_node_2, _ := PickRandomNodes(nodes) // wybór startowych punktów
 
 	order[0][len(order[0])-1] = -1
 	order[1][len(order[1])-1] = -1 // znakowanie końca tablic order
@@ -211,7 +215,7 @@ func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 }
 
 func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	start_node_1, start_node_2, _ := PickRandomNodes(nodes) // wybór startowych punktów
+	start_node_1, start_node_2, _ := PickRandomClosestNodes(distance_matrix, nodes) // wybór startowych punktów
 
 	var (
 		visited      []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków
@@ -243,7 +247,7 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 				}
 				for j := range cycle1 {
 					temp_cycle = utils.Insert(cycle1, j, i) // musiałem sam napisać funkcję do dodwawania elementu do macierzy XD
-					cost = 0                                // występowały leaki pamięci i program odpierdalał
+					cost = 0                                // występowały leaki pamięci i program miał pr
 					for node_idx := range temp_cycle {
 						cost += distance_matrix[temp_cycle[node_idx]][temp_cycle[(node_idx+1)%len(temp_cycle)]]
 					}
@@ -289,38 +293,207 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 	return nil
 }
 
-func ComputeRegrets(distances []*utils.EdgeLinkedList, visited []bool, degree int) []int {
+func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
+	start_node_1, start_node_2, _ := PickRandomNodes(nodes) // wybór startowych punktów
+
 	var (
-		regrets []int = make([]int, len(distances))
-		oneEdge bool  // czy tylko 1 krawędzi; dla każdego wierzchołka to samo bo każdy tak samo długie listy - l. krawędzi
+		visited []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków
+		cycle1  []int  = make([]int, 0, len(order[0]))
+		cycle2  []int  = make([]int, 0, len(order[1]))
 	)
-	for i := range visited {
-		if !visited[i] {
-			oneEdge = distances[i].Next == nil
-			break
+	visited[start_node_1] = true
+	visited[start_node_2] = true
+
+	cycle1 = append(cycle1, start_node_1)
+	cycle2 = append(cycle2, start_node_2)
+
+	node_val := 10000
+	node_idx := -1
+	for i, val := range distance_matrix[start_node_1] {
+		if val == 0 || visited[i] {
+			continue
+		}
+		if val < node_val {
+			node_val = val
+			node_idx = i
 		}
 	}
-	for i := range distances {
-		var current_reg int = 1
+	cycle1 = append(cycle1, node_idx)
+	visited[node_idx] = true
+
+	node_val = 10000
+	node_idx = -1
+	for i, val := range distance_matrix[start_node_2] {
+		if val == 0 || visited[i] {
+			continue
+		}
+		if val < node_val {
+			node_val = val
+			node_idx = i
+		}
+	}
+	cycle2 = append(cycle2, node_idx)
+	visited[node_idx] = true
+
+	for len(cycle1) < len(order[0]) || len(cycle2) < len(order[1]) {
+		node1, node2, _ := BestNodes(cycle1, distance_matrix, visited)
+		best_score1, second_best_score1, idx1, _ := Calculate4Regret(node1, cycle1, distance_matrix)
+		regret1 := second_best_score1 - best_score1
+		best_score2, second_best_score2, idx2, _ := Calculate4Regret(node2, cycle1, distance_matrix)
+		regret2 := second_best_score2 - best_score2
+		if regret1 > regret2 {
+			cycle1 = utils.Insert(cycle1, idx1, node1)
+			visited[node1] = true
+		} else {
+			cycle1 = utils.Insert(cycle1, idx2, node2)
+			visited[node2] = true
+		}
+
+		node3, node4, _ := BestNodes(cycle2, distance_matrix, visited)
+
+		best_score3, second_best_score3, idx3, _ := Calculate4Regret(node3, cycle2, distance_matrix)
+		regret3 := second_best_score3 - best_score3
+		best_score4, second_best_score4, idx4, _ := Calculate4Regret(node4, cycle2, distance_matrix)
+		regret4 := second_best_score4 - best_score4
+		if regret3 > regret4 {
+			cycle2 = utils.Insert(cycle2, idx3, node3)
+			visited[node3] = true
+		} else {
+			cycle2 = utils.Insert(cycle2, idx4, node4)
+			visited[node4] = true
+		}
+
+	}
+	order[0] = cycle1
+	order[1] = cycle2
+	return nil
+}
+func WeightedRegret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
+	start_node_1, start_node_2, _ := PickRandomClosestNodes(distance_matrix, nodes) // wybór startowych punktów
+
+	var (
+		visited       []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków
+		cycle1        []int  = make([]int, 0, len(order[0]))
+		cycle2        []int  = make([]int, 0, len(order[1]))
+		weight_regret int    = 1
+		weight_change int    = -4
+	)
+	visited[start_node_1] = true
+	visited[start_node_2] = true
+
+	cycle1 = append(cycle1, start_node_1)
+	cycle2 = append(cycle2, start_node_2)
+
+	node_val := 10000
+	node_idx := -1
+	for i, val := range distance_matrix[start_node_1] {
+		if val == 0 || visited[i] {
+			continue
+		}
+		if val < node_val {
+			node_val = val
+			node_idx = i
+		}
+	}
+	cycle1 = append(cycle1, node_idx)
+	visited[node_idx] = true
+
+	node_val = 10000
+	node_idx = -1
+	for i, val := range distance_matrix[start_node_2] {
+		if val == 0 || visited[i] {
+			continue
+		}
+		if val < node_val {
+			node_val = val
+			node_idx = i
+		}
+	}
+	cycle2 = append(cycle2, node_idx)
+	visited[node_idx] = true
+
+	for len(cycle1) < len(order[0]) || len(cycle2) < len(order[1]) {
+		node1, node2, _ := BestNodes(cycle1, distance_matrix, visited)
+
+		best_score1, second_best_score1, idx1, _ := Calculate4Regret(node1, cycle1, distance_matrix)
+		regret1 := second_best_score1 - best_score1
+		total_cost1 := regret1*weight_regret + best_score1*weight_change
+		best_score2, second_best_score2, idx2, _ := Calculate4Regret(node2, cycle1, distance_matrix)
+		regret2 := second_best_score2 - best_score2
+		total_cost2 := regret2*weight_regret + best_score2*weight_change
+		if total_cost1 > total_cost2 {
+			cycle1 = utils.Insert(cycle1, idx1, node1)
+			visited[node1] = true
+		} else {
+			cycle1 = utils.Insert(cycle1, idx2, node2)
+			visited[node2] = true
+		}
+
+		node3, node4, _ := BestNodes(cycle2, distance_matrix, visited)
+
+		best_score3, second_best_score3, idx3, _ := Calculate4Regret(node3, cycle2, distance_matrix)
+		regret3 := second_best_score3 - best_score3
+		total_cost3 := regret3*weight_regret + best_score3*weight_change
+		best_score4, second_best_score4, idx4, _ := Calculate4Regret(node4, cycle2, distance_matrix)
+		regret4 := second_best_score4 - best_score4
+		total_cost4 := regret4*weight_regret + best_score4*weight_change
+		if total_cost3 > total_cost4 {
+			cycle2 = utils.Insert(cycle2, idx3, node3)
+			visited[node3] = true
+		} else {
+			cycle2 = utils.Insert(cycle2, idx4, node4)
+			visited[node4] = true
+		}
+
+	}
+	order[0] = cycle1
+	order[1] = cycle2
+	return nil
+}
+
+func Calculate4Regret(node1 int, cycle []int, distance_matrix [][]int) (int, int, int, error) {
+	minimal_cost := -1
+	second_minimal_cost := -1
+	idx := -1
+	for i := range cycle {
+		temp_cycle := utils.Insert(cycle, i, node1) 
+		cost := utils.CalculateCycleLen(temp_cycle, distance_matrix)
+		if minimal_cost == -1 || cost < minimal_cost {
+			minimal_cost = cost
+			idx = i
+		} else if second_minimal_cost == -1 || cost < second_minimal_cost {
+			second_minimal_cost = cost
+		}
+	}
+	return minimal_cost, second_minimal_cost, idx, nil
+}
+func BestNodes(cycle []int, distance_matrix [][]int, visited []bool) (int, int, error) {
+	var (
+		node1 int
+		node2 int
+	)
+	worst_cost := -1
+	second_worst_cost := -1
+	for i := range visited {
 		if visited[i] {
 			continue
 		}
-		var current *utils.EdgeLinkedList = distances[i]
-		var first_value int = current.Value
-		if oneEdge { // gdyby była jedna krawędź - nie ma sensu liczyć żalu zamiast tego po prostu wzrost długości
-			regrets[i] = first_value
-			continue
-		}
-
-		for current_reg < degree && current.Next != nil { // liczenie kolejnych żali
-			regrets[i] += current.Next.Value - first_value // kolejne krawędzie mają większe wartości
-			current_reg++
-			current = current.Next
+		for j := range cycle {
+			temp_cycle := utils.Insert(cycle, j, i) // musiałem sam napisać funkcję do dodwawania elementu do macierzy XD
+			cost := utils.CalculateCycleLen(temp_cycle, distance_matrix)
+			if cost > second_worst_cost {
+				second_worst_cost = cost
+				node2 = i
+			} else if cost > worst_cost {
+				worst_cost = cost
+				node1 = i
+			}
 		}
 	}
-	return regrets
+	return node1, node2, nil
 }
 
+/*
 func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	var (
 		visited   []bool                    = make([]bool, len(nodes))                   // tablica dodanych wierzchołków
@@ -333,7 +506,7 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	for i := range distances {
 		distances[i] = make([]*utils.EdgeLinkedList, len(nodes))
 	}
-	start_node_1, start_node_2, _ := PickRandomFarthest(distance_matrix, nodes, visited) // wybór startowych punktów
+	start_node_1, start_node_2, _ := PickRandomNodes(nodes) // wybór startowych punktów
 
 	visited[start_node_1] = true
 	visited[start_node_2] = true
@@ -451,3 +624,36 @@ func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 
 	return nil
 }
+
+func ComputeRegrets(distances []*utils.EdgeLinkedList, visited []bool, degree int) []int {
+	var (
+		regrets []int = make([]int, len(distances))
+		oneEdge bool  // czy tylko 1 krawędzi; dla każdego wierzchołka to samo bo każdy tak samo długie listy - l. krawędzi
+	)
+	for i := range visited {
+		if !visited[i] {
+			oneEdge = distances[i].Next == nil
+			break
+		}
+	}
+	for i := range distances {
+		var current_reg int = 1
+		if visited[i] {
+			continue
+		}
+		var current *utils.EdgeLinkedList = distances[i]
+		var first_value int = current.Value
+		if oneEdge { // gdyby była jedna krawędź - nie ma sensu liczyć żalu zamiast tego po prostu wzrost długości
+			regrets[i] = first_value
+			continue
+		}
+
+		for current_reg < degree && current.Next != nil { // liczenie kolejnych żali
+			regrets[i] += current.Next.Value - first_value // kolejne krawędzie mają większe wartości
+			current_reg++
+			current = current.Next
+		}
+	}
+	return regrets
+}
+*/
