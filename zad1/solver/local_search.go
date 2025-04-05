@@ -24,11 +24,14 @@ type SwapMove struct {
 
 type MoveEdge struct {
 	Cycle int
+	// TODO: nodes/edges
+	Delta int
 }
 
 type Move interface {
 	ExecuteMove(distance_matrix [][]int, order [][]int) // wykonanie ruchu
 	GetDelta() int                                      // zmiana długości cyklu po dodaniu krawędzi
+	SetDelta(delta int)                                 // ustawienie zmiany długości cyklu po dodaniu krawędzi
 }
 
 func (m *SwapMove) ExecuteMove(distance_matrix [][]int, order [][]int) {
@@ -39,12 +42,92 @@ func (m *SwapMove) GetDelta() int {
 	return m.Delta // zmiana długości cyklu po dodaniu krawędzi
 }
 
+func (m *SwapMove) SetDelta(delta int) {
+	m.Delta = delta
+}
+
 func (m *MoveNode) ExecuteMove(distance_matrix [][]int, order [][]int) {
 	order[m.Cycle][m.N1], order[m.Cycle][m.N2] = order[m.Cycle][m.N2], order[m.Cycle][m.N1] // zamiana wierzchołków między cyklami
 }
 
 func (m *MoveNode) GetDelta() int {
 	return m.Delta // zmiana długości cyklu po dodaniu krawędzi
+}
+
+func (m *MoveNode) SetDelta(delta int) {
+	m.Delta = delta
+}
+
+func (m *MoveEdge) ExecuteMove(distance_matrix [][]int, order [][]int) {
+	panic("not implemented") // TODO: implement
+}
+
+func (m *MoveEdge) GetDelta() int {
+	return m.Delta // zmiana długości cyklu po dodaniu krawędzi
+}
+
+func (m *MoveEdge) SetDelta(delta int) {
+	m.Delta = delta
+}
+
+func CalculateDelta(move Move, distance_matrix [][]int, order [][]int) int {
+	var (
+		delta      int = 0 // zmiana długości cyklu po dodaniu krawędzi
+		n1         int     // wierzchołek 1 - nr w cyklu
+		n2         int     // wierzchołek 2 - nr w cyklu
+		curr_node1 int     // numer wierzchołka 1
+		curr_node2 int     // numer wierzchołka 2
+		bi         int     // wierzchołek przed i w cyklu 1
+		bj         int     // wierzchołek przed j w cyklu 2
+		ai         int     // wierzchołek po i w cyklu 1
+		aj         int     // wierzchołek po j w cyklu 2
+	)
+	switch m := move.(type) {
+	case *MoveNode:
+		n1, n2 = m.N1, m.N2                       // wierzchołki 1 i 2 - nr w cyklu
+		curr_node1 = order[m.Cycle][m.N1]         // wierzchołek aktualny w cyklu
+		curr_node2 = order[m.Cycle][m.N2]         // wierzchołek aktualny w cyklu
+		bi = utils.ElemBefore(order[m.Cycle], n1) // wierzchołek przed i w cyklu 1
+		bj = utils.ElemBefore(order[m.Cycle], n2) // wierzchołek przed j w cyklu 2
+		ai = utils.ElemAfter(order[m.Cycle], n1)  // wierzchołek po i w cyklu 1
+		aj = utils.ElemAfter(order[m.Cycle], n2)  // wierzchołek po j w cyklu 2
+	case *SwapMove:
+		n1, n2 = m.N1, m.N2                 // wierzchołki 1 i 2 - nr w cyklu
+		curr_node1 = order[0][m.N1]         // wierzchołek aktualny w cyklu 1
+		curr_node2 = order[1][m.N2]         // wierzchołek aktualny w cyklu 2
+		bi = utils.ElemBefore(order[0], n1) // wierzchołek przed i w cyklu 1
+		bj = utils.ElemBefore(order[1], n2) // wierzchołek przed j w cyklu 2
+		ai = utils.ElemAfter(order[0], n1)  // wierzchołek po i w cyklu 1
+		aj = utils.ElemAfter(order[1], n2)  // wierzchołek po j w cyklu 2
+	case *MoveEdge:
+		panic("not implemented") // TODO: implement
+	}
+
+	switch m := move.(type) {
+	case *SwapMove:
+		delta = distance_matrix[bi][curr_node2] + distance_matrix[curr_node2][ai] + // dystansy od wierzchołków przed i po aktualnych po zamianie
+			distance_matrix[bj][curr_node1] + distance_matrix[curr_node1][aj] -
+			distance_matrix[bi][curr_node1] - distance_matrix[curr_node1][ai] - // dystansy od wierzchołków przed i po aktualnych przed zamianą
+			distance_matrix[bj][curr_node2] - distance_matrix[curr_node2][aj] // dystansy od wierzchołków przed i po aktualnych przed zamianą
+		m.Delta = delta // ustaw zmianę długości cyklu na mniejszą
+	case *MoveNode:
+		if bi == curr_node2 { // jeśli wierzchołki są sąsiadami w cyklu (j przed i)
+			delta = distance_matrix[curr_node1][bj] + distance_matrix[curr_node2][ai] - // dystansy od wierzchołków przed i po aktualnych po zamianie
+				distance_matrix[curr_node1][ai] - distance_matrix[curr_node2][bj] // dystansy od wierzchołków przed i po aktualnych przed zamianą
+		} else if ai == curr_node2 { // jeśli wierzchołki są sąsiadami w cyklu (i przed j)
+			delta = distance_matrix[curr_node1][aj] + distance_matrix[curr_node2][bi] - // dystansy od wierzchołków przed i po aktualnych po zamianie
+				distance_matrix[curr_node1][bi] - distance_matrix[curr_node2][aj] // dystansy od wierzchołków przed i po aktualnych przed zamianą
+		} else { // jeśli wierzchołki nie są sąsiadami w cyklu - tak jak w SwapMove
+			delta = distance_matrix[bi][curr_node2] + distance_matrix[curr_node2][ai] + // dystansy od wierzchołków przed i po aktualnych po zamianie
+				distance_matrix[bj][curr_node1] + distance_matrix[curr_node1][aj] -
+				distance_matrix[bi][curr_node1] - distance_matrix[curr_node1][ai] - // dystansy od wierzchołków przed i po aktualnych przed zamianą
+				distance_matrix[bj][curr_node2] - distance_matrix[curr_node2][aj] // dystansy od wierzchołków przed i po aktualnych przed zamianą
+		}
+		m.Delta = delta // ustaw zmianę długości cyklu na mniejszą
+	case *MoveEdge:
+		panic("not implemented") // TODO: implement
+	}
+	return delta
 }
 
 func FisherYatesShuffle[T comparable](arr []T) []T {
@@ -55,15 +138,16 @@ func FisherYatesShuffle[T comparable](arr []T) []T {
 	return arr // zwróć przetasowaną tablicę
 }
 
-func FindBestMoveGreedy(moves []Move) (Move, int) {
+func FindBestMoveGreedy(moves []Move, distance_matrix [][]int, order [][]int) (Move, int) {
 	moves = FisherYatesShuffle(moves) // przetasuj ruchy
 	for m := range moves {            // dla każdego ruchu
 		move := moves[m]
-		if move.GetDelta() < 0 { // jeśli zmiana długości cyklu jest mniejsza od aktualnej i mniejsza od 0
-			return move, move.GetDelta()
+		delta := CalculateDelta(move, distance_matrix, order)
+		if delta < 0 { // jeśli zmiana długości cyklu jest mniejsza od aktualnej i mniejsza od 0
+			move.SetDelta(delta) // ustaw zmianę długości cyklu na mniejszą
+			return move, delta
 		}
 	}
-
 	return nil, math.MaxInt // zwróć najlepszy ruch i minimalną zmianę długości cyklu
 }
 
@@ -130,6 +214,25 @@ func AllMovesBetweenCycles(distance_matrix [][]int, order [][]int, distances_bef
 	return moves, nil
 }
 
+func AllMovesBetweenCyclesNoDistance(order [][]int) ([]SwapMove, error) {
+	var (
+		moves []SwapMove // aktualnie dostępne ruchy
+	)
+
+	for i := 0; i < len(order[0]); i++ {
+		for j := 0; j < len(order[1]); j++ {
+			// zamiana wierzchołka i z cyklu 1 z j z cyklu 2
+			moves = append(moves, SwapMove{
+				N1:    i,
+				N2:    j,
+				Delta: math.MaxInt,
+			})
+		}
+	}
+
+	return moves, nil
+}
+
 func AllMovesNodesCycle(distance_matrix [][]int, order []int, cycle int, distances_before []int) []MoveNode {
 	var (
 		n1         int        // wierzchołek 1
@@ -171,6 +274,38 @@ func AllMovesNodesCycle(distance_matrix [][]int, order []int, cycle int, distanc
 	}
 
 	return moves_node
+}
+
+func AllMovesNodesCycleNoDistance(order []int, cycle int) []MoveNode {
+	var (
+		moves_node []MoveNode // aktualnie dostępne ruchy
+	)
+
+	// dla każdej pary wierzchołków w cyklu; kolejność nie ma znaczenia
+	for i := 0; i < len(order); i++ {
+		for j := i + 1; j < len(order); j++ {
+
+			// dodaj ruch do listy
+			moves_node = append(moves_node, MoveNode{
+				Cycle: cycle,
+				N1:    i,
+				N2:    j,
+				Delta: math.MaxInt,
+			})
+		}
+	}
+
+	return moves_node
+}
+
+func AllMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []MoveEdge {
+	panic("not implemented") // TODO: implement
+	return nil
+}
+
+func AllMovesEdgesCycleNoDistance(order []int, cycle int) []MoveEdge {
+	panic("not implemented") // TODO: implement
+	return nil
 }
 
 func SteepestNode(distance_matrix [][]int, order [][]int) error {
@@ -231,8 +366,7 @@ func GreedyNode(distance_matrix [][]int, order [][]int) error {
 
 	for {
 		// ruchy pomiędzy cyklami
-		distances_before := DistancesBefore(distance_matrix, order)                        // dystans do wierzchołków przed i po aktualnym w cyklu
-		swap_moves, err := AllMovesBetweenCycles(distance_matrix, order, distances_before) // wszystkie ruchy między cyklami
+		swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
 		if err != nil {
 			return err
 		}
@@ -243,13 +377,13 @@ func GreedyNode(distance_matrix [][]int, order [][]int) error {
 
 		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
 		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesNodesCycle(distance_matrix, order[c], c, distances_before[c]) // wszystkie ruchy w cyklu zamiany wierzchołków
+			moves_cycle := AllMovesNodesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
 
 			for m := range moves_cycle { // dla każdego ruchu
 				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
 			}
 		}
-		best_move, min_delta = FindBestMoveGreedy(all_moves) // najlepszy ruch i minimalna zmiana długości cyklu
+		best_move, min_delta = FindBestMoveGreedy(all_moves, distance_matrix, order) // najlepszy ruch i minimalna zmiana długości cyklu
 
 		// koniec iteracji
 		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
@@ -259,9 +393,23 @@ func GreedyNode(distance_matrix [][]int, order [][]int) error {
 		// jeśli znaleziono ruch, to wykonaj go
 		best_move.ExecuteMove(distance_matrix, order) // wykonaj najlepszy ruch
 		current_length = current_length + min_delta   // aktualizuj długość cyklu
-		best_move, min_delta = nil, math.MaxInt       // ustaw najlepszy ruch na nil i delta MaxInt
+
+		best_move, min_delta = nil, math.MaxInt // ustaw najlepszy ruch na nil i delta MaxInt
 	}
 
+	return nil
+}
+
+// TODO: SteepestEdge: implementacja AllMovesEdgesCycle i AllMovesEdgesCycleNoDistance -> to co SteepestNode ale AllMovesNodesCycle zamienić na AllMovesEdgesCycle
+// TODO: GreedyEdge: implementacja AllMovesEdgesCycle i AllMovesEdgesCycleNoDistance -> to co GreedyNode ale AllMovesNodesCycle zamienić na AllMovesEdgesCycle
+
+func SteepestEdge(distance_matrix [][]int, order [][]int) error {
+	panic("not implemented") // TODO: implement
+	return nil
+}
+
+func GreedyEdge(distance_matrix [][]int, order [][]int) error {
+	panic("not implemented") // TODO: implement
 	return nil
 }
 
@@ -274,6 +422,7 @@ func SteepestNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.N
 
 func SteepestEdgeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	Random(distance_matrix, order, nodes)
+	// SteepestEdge(distance_matrix, order)
 
 	return nil
 }
@@ -287,6 +436,7 @@ func GreedyNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 
 func GreedyEdgeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	Random(distance_matrix, order, nodes)
+	// GreedyEdge(distance_matrix, order)
 
 	return nil
 }
@@ -300,6 +450,7 @@ func SteepestNodeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []rea
 
 func SteepestEdgeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	GreedyCycle(distance_matrix, order, nodes)
+	// SteepestEdge(distance_matrix, order)
 
 	return nil
 }
@@ -313,18 +464,21 @@ func GreedyNodeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reade
 
 func GreedyEdgeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	GreedyCycle(distance_matrix, order, nodes)
+	// GreedyEdge(distance_matrix, order)
 
 	return nil
 }
 
 func RandomWalkRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	Random(distance_matrix, order, nodes)
+	// TODO: RandomWalk
 
 	return nil
 }
 
 func RandomWalkGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	GreedyCycle(distance_matrix, order, nodes)
+	// TODO: RandomWalk
 
 	return nil
 }
