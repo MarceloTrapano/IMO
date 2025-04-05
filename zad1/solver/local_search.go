@@ -2,6 +2,7 @@ package solver
 
 import (
 	"math"
+	"math/rand"
 	"zad1/reader"
 	"zad1/utils"
 )
@@ -44,6 +45,26 @@ func (m *MoveNode) ExecuteMove(distance_matrix [][]int, order [][]int) {
 
 func (m *MoveNode) GetDelta() int {
 	return m.Delta // zmiana długości cyklu po dodaniu krawędzi
+}
+
+func FisherYatesShuffle[T comparable](arr []T) []T {
+	for i := len(arr) - 1; i > 0; i-- { // iteracja po arr od końca
+		j := rand.Intn(i + 1)           // losowy indeks od 0 do i
+		arr[i], arr[j] = arr[j], arr[i] // zamień elementy miejscami
+	}
+	return arr // zwróć przetasowaną tablicę
+}
+
+func FindBestMoveGreedy(moves []Move) (Move, int) {
+	moves = FisherYatesShuffle(moves) // przetasuj ruchy
+	for m := range moves {            // dla każdego ruchu
+		move := moves[m]
+		if move.GetDelta() < 0 { // jeśli zmiana długości cyklu jest mniejsza od aktualnej i mniejsza od 0
+			return move, move.GetDelta()
+		}
+	}
+
+	return nil, math.MaxInt // zwróć najlepszy ruch i minimalną zmianę długości cyklu
 }
 
 func FindBestMove(moves []Move) (Move, int) {
@@ -152,8 +173,7 @@ func AllMovesNodesCycle(distance_matrix [][]int, order []int, cycle int, distanc
 	return moves_node
 }
 
-func SteepestNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	Random(distance_matrix, order, nodes)
+func SteepestNode(distance_matrix [][]int, order [][]int) error {
 	var (
 		best_move       Move   = nil                                                // najlepszy ruch w iteracji
 		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
@@ -199,6 +219,59 @@ func SteepestNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.N
 	return nil
 }
 
+func GreedyNode(distance_matrix [][]int, order [][]int) error {
+	var (
+		best_move       Move   = nil                                                // najlepszy ruch w iteracji
+		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
+		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
+		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
+		current_length  int    = current_length1 + current_length2
+		all_moves       []Move // aktualnie dostępne ruchy
+	)
+
+	for {
+		// ruchy pomiędzy cyklami
+		distances_before := DistancesBefore(distance_matrix, order)                        // dystans do wierzchołków przed i po aktualnym w cyklu
+		swap_moves, err := AllMovesBetweenCycles(distance_matrix, order, distances_before) // wszystkie ruchy między cyklami
+		if err != nil {
+			return err
+		}
+		all_moves = make([]Move, len(swap_moves)) // lista ruchów
+		for i := range swap_moves {               // dla każdego ruchu
+			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
+		}
+
+		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
+		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
+			moves_cycle := AllMovesNodesCycle(distance_matrix, order[c], c, distances_before[c]) // wszystkie ruchy w cyklu zamiany wierzchołków
+
+			for m := range moves_cycle { // dla każdego ruchu
+				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
+			}
+		}
+		best_move, min_delta = FindBestMoveGreedy(all_moves) // najlepszy ruch i minimalna zmiana długości cyklu
+
+		// koniec iteracji
+		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
+			best_move = nil // ustaw najlepszy ruch na nil
+			break
+		}
+		// jeśli znaleziono ruch, to wykonaj go
+		best_move.ExecuteMove(distance_matrix, order) // wykonaj najlepszy ruch
+		current_length = current_length + min_delta   // aktualizuj długość cyklu
+		best_move, min_delta = nil, math.MaxInt       // ustaw najlepszy ruch na nil i delta MaxInt
+	}
+
+	return nil
+}
+
+func SteepestNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
+	Random(distance_matrix, order, nodes)
+	SteepestNode(distance_matrix, order)
+
+	return nil
+}
+
 func SteepestEdgeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	Random(distance_matrix, order, nodes)
 
@@ -207,6 +280,7 @@ func SteepestEdgeRandom(distance_matrix [][]int, order [][]int, nodes []reader.N
 
 func GreedyNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	Random(distance_matrix, order, nodes)
+	GreedyNode(distance_matrix, order)
 
 	return nil
 }
@@ -219,6 +293,7 @@ func GreedyEdgeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 
 func SteepestNodeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	GreedyCycle(distance_matrix, order, nodes)
+	SteepestNode(distance_matrix, order)
 
 	return nil
 }
@@ -231,6 +306,7 @@ func SteepestEdgeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []rea
 
 func GreedyNodeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	GreedyCycle(distance_matrix, order, nodes)
+	GreedyNode(distance_matrix, order)
 
 	return nil
 }

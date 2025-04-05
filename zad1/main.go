@@ -63,6 +63,7 @@ func main() {
 		}
 		results[0][i] = utils.CalculateCycleLen(order[0], distance_matrix)
 		results[1][i] = utils.CalculateCycleLen(order[1], distance_matrix)
+		fmt.Println("Results: ", results[0][i]+results[1][i])
 		if results[0][i]+results[1][i] > worst_score {
 			worst_score = results[0][i] + results[1][i]
 			worst_order = append(order[:0:0], order...)
