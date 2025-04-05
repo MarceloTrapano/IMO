@@ -187,16 +187,16 @@ func Insert(array []int, i int, j int) []int {
 	}
 	return new_arr
 }
-func MaxOfArray(arr []int) (int, int, error){
+func MaxOfArray(arr []int) (int, int, error) {
 	idx := -1
 	max := -1
-    for i, value := range(arr) {
-        if value > max {
-            max = value
+	for i, value := range arr {
+		if value > max {
+			max = value
 			idx = i
-        }
-    }
-    return max, idx, nil
+		}
+	}
+	return max, idx, nil
 }
 func CalculateCycleLen(order []int, distance_matrix [][]int) int {
 	cost := 0
@@ -232,4 +232,32 @@ func NearestNode(nodes []reader.Node, distance_matrix [][]int, node int, visited
 		err = fmt.Errorf("no nearest node found for %v - invalid distance matrix", node)
 	}
 	return
+}
+
+func IndexBefore(arr []int, i int) int {
+	if i == 0 {
+		return len(arr) - 1
+	}
+	return i - 1
+}
+
+func IndexAfter(arr []int, i int) int {
+	if i == len(arr)-1 {
+		return 0
+	}
+	return i + 1
+}
+
+func ElemBefore(arr []int, i int) int {
+	if i == 0 {
+		return arr[len(arr)-1]
+	}
+	return arr[i-1]
+}
+
+func ElemAfter(arr []int, i int) int {
+	if i == len(arr)-1 {
+		return arr[0]
+	}
+	return arr[i+1]
 }

@@ -39,7 +39,7 @@ func main() {
 		distance_matrix [][]int = make([][]int, len(nodes))
 		results         [][]int = make([][]int, 2)
 	)
-	num_of_rep := 10
+	num_of_rep := 100
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
@@ -55,7 +55,7 @@ func main() {
 	best_score := -1
 	worst_score := -1
 	for i := 0; i < num_of_rep; i++ {
-		fmt.Printf("Trial: %d\n",i+1)
+		fmt.Printf("Trial: %d\n", i+1)
 		order, err := solver.Solve(nodes, algorithm)
 		if err != nil {
 			fmt.Println(err)

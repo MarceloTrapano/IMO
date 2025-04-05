@@ -116,8 +116,30 @@ func Solve(nodes []reader.Node, algorithm string) ([][]int, error) {
 		f = GreedyCycle
 	case "reg": // regret - żal
 		f = Regret
-	case "wreg":
+	case "wreg": // weighted regret - żal ważony
 		f = WeightedRegret
+	case "rand": // rozwiązanie losowe
+		f = Random
+	case "snr": // steepest node random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
+		f = SteepestNodeRandom
+	case "ser": // steepest edge random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
+		f = SteepestEdgeRandom
+	case "gnr": // greedy node random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
+		f = GreedyNodeRandom
+	case "ger": // greedy edge random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
+		f = GreedyEdgeRandom
+	case "sngc": // steepest node greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
+		f = SteepestNodeGreedyCycle
+	case "segc": // steepest edge greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
+		f = SteepestEdgeGreedyCycle
+	case "gngc": // greedy node greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
+		f = GreedyNodeGreedyCycle
+	case "gegc": // greedy edge greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
+		f = GreedyEdgeGreedyCycle
+	case "rwr": // random walk random - losowe rozwiązenie początkowe, wersja losowego błądzenia lokalnego przeszukiwania
+		f = RandomWalkRandom
+	case "rwgc": // random walk greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja losowego błądzenia lokalnego przeszukiwania
+		f = RandomWalkGreedyCycle
 	default:
 		f = InOrder
 	}
@@ -130,6 +152,7 @@ func Solve(nodes []reader.Node, algorithm string) ([][]int, error) {
 	if err != nil {
 		return order, err
 	}
+
 	return order, nil
 }
 
@@ -456,7 +479,7 @@ func Calculate4Regret(node1 int, cycle []int, distance_matrix [][]int) (int, int
 	second_minimal_cost := -1
 	idx := -1
 	for i := range cycle {
-		temp_cycle := utils.Insert(cycle, i, node1) 
+		temp_cycle := utils.Insert(cycle, i, node1)
 		cost := utils.CalculateCycleLen(temp_cycle, distance_matrix)
 		if minimal_cost == -1 || cost < minimal_cost {
 			minimal_cost = cost
@@ -657,3 +680,30 @@ func ComputeRegrets(distances []*utils.EdgeLinkedList, visited []bool, degree in
 	return regrets
 }
 */
+
+func Random(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
+	result := make([][]int, NumCycles)
+	nodes_copy := make([]reader.Node, len(nodes))
+	copy(nodes_copy, nodes)             // kopiowanie tablicy nodes do nowej tablicy
+	nodes_nr := make([]int, len(nodes)) // tablica z numerami wierzchołków
+	for i := range nodes {
+		nodes_nr[i] = i
+	}
+	for len(nodes_copy) > 0 {
+		for i := 0; i < NumCycles; i++ {
+			if len(nodes_copy) == 0 {
+				break
+			}
+			node_idx, err := PickRandomNode(nodes_copy)
+			if err != nil {
+				return err
+			}
+			result[i] = append(result[i], nodes_nr[node_idx]) // dodanie wierzchołka do cyklu
+			// usunięcie wierzchołka z list
+			nodes_copy = append(nodes_copy[:node_idx], nodes_copy[node_idx+1:]...)
+			nodes_nr = append(nodes_nr[:node_idx], nodes_nr[node_idx+1:]...)
+		}
+	}
+	copy(order, result)
+	return nil
+}
