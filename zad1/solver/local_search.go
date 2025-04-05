@@ -1,7 +1,6 @@
 package solver
 
 import (
-	"fmt"
 	"math"
 	"zad1/reader"
 	"zad1/utils"
@@ -82,19 +81,7 @@ func DistancesBefore(distance_matrix [][]int, order [][]int) [][]int {
 func AllMovesBetweenCycles(distance_matrix [][]int, order [][]int, distances_before [][]int) ([]SwapMove, error) {
 	var (
 		moves []SwapMove // aktualnie dostępne ruchy
-		// distances_before [][]int    = make([][]int, NumCycles) // suma dystansów do wierzchołków przed i po aktualnym w cyklu
 	)
-	// for i := range distances_before { // dla każdego cyklu
-	// 	distances_before[i] = make([]int, len(order[i]))
-
-	// 	for j := range distances_before[i] { // dla każdego wierzchołka w cyklu
-	// 		curr_node := order[i][j]
-	// 		// dystans do wierzchołka przed i po aktualnym
-	// 		bj := utils.ElemBefore(order[i], j) // wierzchołek przed j
-	// 		aj := utils.ElemAfter(order[i], j)  // wierzchołek przed j
-	// 		distances_before[i][j] = distance_matrix[bj][curr_node] + distance_matrix[curr_node][aj]
-	// 	}
-	// }
 
 	for i := 0; i < len(order[0]); i++ {
 		for j := 0; j < len(order[1]); j++ {
@@ -109,14 +96,6 @@ func AllMovesBetweenCycles(distance_matrix [][]int, order [][]int, distances_bef
 			delta := distance_matrix[bi][curr_node2] + distance_matrix[curr_node2][ai] + // dystansy od wierzchołków przed i po aktualnych po zamianie
 				distance_matrix[bj][curr_node1] + distance_matrix[curr_node1][aj] -
 				distances_before[0][i] - distances_before[1][j]
-
-			// // debug czy działa distance_matrix
-			// if delta != distance_matrix[bi][curr_node2]+distance_matrix[curr_node2][ai]+ // dystansy od wierzchołków przed i po aktualnych po zamianie
-			// 	distance_matrix[bj][curr_node1]+distance_matrix[curr_node1][aj]-
-			// 	distance_matrix[bi][curr_node1]-distance_matrix[curr_node1][ai]- // dystansy od wierzchołków przed i po aktualnych przed zamianą
-			// 	distance_matrix[bj][curr_node2]-distance_matrix[curr_node2][aj] {
-			// 	panic("Invalid delta")
-			// }
 
 			// dodaj ruch do listy
 			moves = append(moves, SwapMove{
@@ -196,9 +175,6 @@ func SteepestNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.N
 			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
 		}
 
-		// best_swap_move, min_delta_swap := FindBestMove(all_moves) // najlepszy ruch i minimalna zmiana długości cyklu
-		// best_move, min_delta = best_swap_move, min_delta_swap     // minimalna zmiana długości cyklu
-
 		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
 		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
 			moves_cycle := AllMovesNodesCycle(distance_matrix, order[c], c, distances_before[c]) // wszystkie ruchy w cyklu zamiany wierzchołków
@@ -219,16 +195,6 @@ func SteepestNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.N
 		current_length = current_length + min_delta   // aktualizuj długość cyklu
 		best_move, min_delta = nil, math.MaxInt       // ustaw najlepszy ruch na nil i delta MaxInt
 	}
-
-	// debug
-	current_length1 = utils.CalculateCycleLen(order[0], distance_matrix) // aktualizuj długość cyklu 1
-	current_length2 = utils.CalculateCycleLen(order[1], distance_matrix) // aktualizuj długość cyklu 2
-	if current_length1+current_length2 != current_length {
-		fmt.Println("Długość cyklu:", current_length)
-		fmt.Println("Długość cyklu 1 + 2:", current_length1+current_length2)
-		panic("Invalid cycle length")
-	}
-	fmt.Println("SteepestNodeRandom: current length:", current_length)
 
 	return nil
 }
