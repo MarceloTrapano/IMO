@@ -175,16 +175,13 @@ func MatrixMax(matrix [][]int) (int, int, int) {
 }
 
 func Insert(array []int, i int, j int) []int {
-	var new_arr []int
+	var new_arr []int = make([]int, len(array)+1)
 	if i < 0 || i >= len(array) {
 		panic("Index out of range")
 	}
-	for idx, val := range array {
-		if idx == i {
-			new_arr = append(new_arr, j)
-		}
-		new_arr = append(new_arr, val)
-	}
+	copy(new_arr[:i], array[:i])
+	new_arr[i] = j
+	copy(new_arr[i+1:], array[i:])
 	return new_arr
 }
 func MaxOfArray(arr []int) (int, int, error) {

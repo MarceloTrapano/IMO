@@ -121,7 +121,7 @@ func RandomWalk(distance_matrix [][]int, order [][]int) error {
 	var (
 		move           Move
 		current_length int = utils.CalculateCycleLen(order[0], distance_matrix) + utils.CalculateCycleLen(order[1], distance_matrix)
-		save_order [][]int
+		save_order     [][]int
 	)
 	copy(save_order, order)
 	for dummy := 0; dummy < 400_000; dummy++ {
@@ -148,7 +148,7 @@ func RandomWalk(distance_matrix [][]int, order [][]int) error {
 			copy(save_order, order)
 		}
 	}
-	copy(order,save_order)
+	copy(order, save_order)
 	return nil
 }
 func GreedyNode(distance_matrix [][]int, order [][]int) error {
@@ -319,11 +319,11 @@ func CalculateDelta(move Move, distance_matrix [][]int, order [][]int) int {
 		ai = utils.ElemAfter(order[0], n1)  // wierzchołek po i w cyklu 1
 		aj = utils.ElemAfter(order[1], n2)  // wierzchołek po j w cyklu 2
 	case *MoveEdge:
-		n1, n2 = m.N1, m.N2 // wierzchołki 1 i 2 - nr w cyklu
-		curr_node1 = order[m.Cycle][m.N1]
-		curr_node2 = order[m.Cycle][m.N2]
-		ai = utils.ElemAfter(order[m.Cycle], n1)
-		aj = utils.ElemAfter(order[m.Cycle], n2)
+		n1, n2 = m.N1, m.N2                      // wierzchołki 1 i 2 - nr w cyklu
+		curr_node1 = order[m.Cycle][m.N1]        // wierzchołek aktualny w cyklu 1
+		curr_node2 = order[m.Cycle][m.N2]        // wierzchołek aktualny w cyklu 2
+		ai = utils.ElemAfter(order[m.Cycle], n1) // wierzchołek po i w cyklu 1
+		aj = utils.ElemAfter(order[m.Cycle], n2) // wierzchołek po j w cyklu 2
 	}
 
 	switch m := move.(type) {
@@ -349,7 +349,7 @@ func CalculateDelta(move Move, distance_matrix [][]int, order [][]int) int {
 		m.Delta = delta // ustaw zmianę długości cyklu na mniejszą
 	case *MoveEdge:
 		delta = distance_matrix[curr_node1][curr_node2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
-			distance_matrix[ai][curr_node1] + distance_matrix[aj][curr_node2] // dystansy przed zamianą krawędzi
+			distance_matrix[ai][curr_node1] - distance_matrix[aj][curr_node2] // dystansy przed zamianą krawędzi
 		m.Delta = delta // ustaw zmianę długości cyklu na mniejszą
 	}
 	return delta
@@ -534,7 +534,7 @@ func AllMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []MoveE
 			ai := utils.ElemAfter(order, i)
 			aj := utils.ElemAfter(order, j)
 			delta = distance_matrix[n1][n2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
-				distance_matrix[ai][n1] + distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
+				distance_matrix[ai][n1] - distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
 			moves_node = append(moves_node, MoveEdge{
 				N1:    n1,
 				N2:    n2,
