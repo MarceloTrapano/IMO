@@ -1,10 +1,10 @@
 package solver
 
 import (
-	"math"
-	"math/rand"
 	"IMO/reader"
 	"IMO/utils"
+	"math"
+	"math/rand"
 )
 
 // ruch - zamiana wierzchołka N1 z N2 w cyklu Cycle
@@ -32,8 +32,8 @@ type MoveEdge struct {
 
 type Move interface {
 	ExecuteMove(order [][]int) // wykonanie ruchu
-	GetDelta() int                                      // zmiana długości cyklu po dodaniu krawędzi
-	SetDelta(delta int)                                 // ustawienie zmiany długości cyklu po dodaniu krawędzi
+	GetDelta() int             // zmiana długości cyklu po dodaniu krawędzi
+	SetDelta(delta int)        // ustawienie zmiany długości cyklu po dodaniu krawędzi
 }
 
 func (m *SwapMove) ExecuteMove(order [][]int) {
@@ -61,7 +61,7 @@ func (m *MoveNode) SetDelta(delta int) {
 }
 
 func (m *MoveEdge) ExecuteMove(order [][]int) {
-    for i, j := m.N1+1, m.N2; i < j; i, j = i+1, j-1 {
+	for i, j := m.N1+1, m.N2; i < j; i, j = i+1, j-1 {
 		order[m.Cycle][i], order[m.Cycle][j] = order[m.Cycle][j], order[m.Cycle][i] // zamiana krawędzi wewnątrz cyklu
 	}
 }
@@ -104,10 +104,11 @@ func CalculateDelta(move Move, distance_matrix [][]int, order [][]int) int {
 		ai = utils.ElemAfter(order[0], n1)  // wierzchołek po i w cyklu 1
 		aj = utils.ElemAfter(order[1], n2)  // wierzchołek po j w cyklu 2
 	case *MoveEdge:
-		n1, n2 = m.N1, m.N2                 // wierzchołki 1 i 2 - nr w cyklu
+		n1, n2 = m.N1, m.N2 // wierzchołki 1 i 2 - nr w cyklu
 		curr_node1 = order[m.Cycle][m.N1]
-		curr_node2 = order[m.Cycle][m.N2]   
-
+		curr_node2 = order[m.Cycle][m.N2]
+		ai = utils.ElemAfter(order[m.Cycle], n1)
+		aj = utils.ElemAfter(order[m.Cycle], n2)
 	}
 
 	switch m := move.(type) {
@@ -132,6 +133,8 @@ func CalculateDelta(move Move, distance_matrix [][]int, order [][]int) int {
 		}
 		m.Delta = delta // ustaw zmianę długości cyklu na mniejszą
 	case *MoveEdge:
+		delta = distance_matrix[curr_node1][curr_node2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
+			distance_matrix[ai][curr_node1] + distance_matrix[aj][curr_node2] // dystansy przed zamianą krawędzi
 		m.Delta = delta // ustaw zmianę długości cyklu na mniejszą
 	}
 	return delta
@@ -352,9 +355,9 @@ func SteepestNode(distance_matrix [][]int, order [][]int) error {
 			break
 		}
 		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order) // wykonaj najlepszy ruch
-		current_length = current_length + min_delta   // aktualizuj długość cyklu
-		best_move, min_delta = nil, math.MaxInt       // ustaw najlepszy ruch na nil i delta MaxInt
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
+		best_move, min_delta = nil, math.MaxInt     // ustaw najlepszy ruch na nil i delta MaxInt
 	}
 
 	return nil
@@ -397,8 +400,8 @@ func GreedyNode(distance_matrix [][]int, order [][]int) error {
 			break
 		}
 		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order) // wykonaj najlepszy ruch
-		current_length = current_length + min_delta   // aktualizuj długość cyklu
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
 
 		best_move, min_delta = nil, math.MaxInt // ustaw najlepszy ruch na nil i delta MaxInt
 	}
@@ -447,9 +450,9 @@ func SteepestEdge(distance_matrix [][]int, order [][]int) error {
 			break
 		}
 		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order) // wykonaj najlepszy ruch
-		current_length = current_length + min_delta   // aktualizuj długość cyklu
-		best_move, min_delta = nil, math.MaxInt       // ustaw najlepszy ruch na nil i delta MaxInt
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
+		best_move, min_delta = nil, math.MaxInt     // ustaw najlepszy ruch na nil i delta MaxInt
 	}
 
 	return nil
@@ -492,8 +495,8 @@ func GreedyEdge(distance_matrix [][]int, order [][]int) error {
 			break
 		}
 		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order) // wykonaj najlepszy ruch
-		current_length = current_length + min_delta   // aktualizuj długość cyklu
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
 
 		best_move, min_delta = nil, math.MaxInt // ustaw najlepszy ruch na nil i delta MaxInt
 	}
