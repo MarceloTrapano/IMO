@@ -170,25 +170,25 @@ func GreedyNode(distance_matrix [][]int, order [][]int) error {
 		all_moves       []Move // aktualnie dostępne ruchy
 	)
 
+	// ruchy pomiędzy cyklami
+	swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
+	if err != nil {
+		return err
+	}
+	all_moves = make([]Move, len(swap_moves)) // lista ruchów
+	for i := range swap_moves {               // dla każdego ruchu
+		all_moves[i] = &swap_moves[i] // dodaj ruch do listy
+	}
+
+	// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
+	for c := 0; c < NumCycles; c++ { // dla każdego cyklu
+		moves_cycle := AllMovesNodesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
+
+		for m := range moves_cycle { // dla każdego ruchu
+			all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
+		}
+	}
 	for {
-		// ruchy pomiędzy cyklami
-		swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
-		if err != nil {
-			return err
-		}
-		all_moves = make([]Move, len(swap_moves)) // lista ruchów
-		for i := range swap_moves {               // dla każdego ruchu
-			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
-		}
-
-		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
-		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesNodesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
-
-			for m := range moves_cycle { // dla każdego ruchu
-				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
-			}
-		}
 		best_move, min_delta = FindBestMoveGreedy(all_moves, distance_matrix, order) // najlepszy ruch i minimalna zmiana długości cyklu
 
 		// koniec iteracji
@@ -262,25 +262,25 @@ func GreedyEdge(distance_matrix [][]int, order [][]int) error {
 		all_moves       []Move // aktualnie dostępne ruchy
 	)
 
+	// ruchy pomiędzy cyklami
+	swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
+	if err != nil {
+		return err
+	}
+	all_moves = make([]Move, len(swap_moves)) // lista ruchów
+	for i := range swap_moves {               // dla każdego ruchu
+		all_moves[i] = &swap_moves[i] // dodaj ruch do listy
+	}
+
+	// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
+	for c := 0; c < NumCycles; c++ { // dla każdego cyklu
+		moves_cycle := AllMovesEdgesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
+
+		for m := range moves_cycle { // dla każdego ruchu
+			all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
+		}
+	}
 	for {
-		// ruchy pomiędzy cyklami
-		swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
-		if err != nil {
-			return err
-		}
-		all_moves = make([]Move, len(swap_moves)) // lista ruchów
-		for i := range swap_moves {               // dla każdego ruchu
-			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
-		}
-
-		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
-		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesEdgesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
-
-			for m := range moves_cycle { // dla każdego ruchu
-				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
-			}
-		}
 		best_move, min_delta = FindBestMoveGreedy(all_moves, distance_matrix, order) // najlepszy ruch i minimalna zmiana długości cyklu
 
 		// koniec iteracji
