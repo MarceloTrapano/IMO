@@ -130,5 +130,5 @@ func main() {
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("test.json", finalJson, 0644)
+	os.WriteFile("RES_NN_SE_100_kroA200.json", finalJson, 0644)
 }
