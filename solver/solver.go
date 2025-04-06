@@ -1,11 +1,11 @@
 package solver
 
 import (
+	"IMO/reader"
+	"IMO/utils"
 	"fmt"
 	"math"
 	"math/rand"
-	"IMO/reader"
-	"IMO/utils"
 )
 
 const (
@@ -15,11 +15,11 @@ const (
 
 func Solve(nodes []reader.Node, algorithm string, distance_matrix [][]int) ([][]int, error) {
 	var (
-		order           [][]int = make([][]int, NumCycles)  // kolejność odwiedzania wierzchołków dla obydwu cykli
-		nodes_cycle_one int                                 // liczba wierzchołków w cyklu 1
+		order           [][]int = make([][]int, NumCycles) // kolejność odwiedzania wierzchołków dla obydwu cykli
+		nodes_cycle_one int                                // liczba wierzchołków w cyklu 1
 	)
 	// stworzenie macierzy odległości
-	
+
 	// zajęcie pamięci dla macierzy order
 	nodes_cycle_one = int(float64(len(distance_matrix)) * Split)
 	order[0] = make([]int, nodes_cycle_one)
@@ -38,26 +38,6 @@ func Solve(nodes []reader.Node, algorithm string, distance_matrix [][]int) ([][]
 		f = WeightedRegret
 	case "rand": // rozwiązanie losowe
 		f = Random
-	case "snr": // steepest node random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
-		f = SteepestNodeRandom
-	case "ser": // steepest edge random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
-		f = SteepestEdgeRandom
-	case "gnr": // greedy node random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
-		f = GreedyNodeRandom
-	case "ger": // greedy edge random - losowe rozwiązenie początowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
-		f = GreedyEdgeRandom
-	case "sngc": // steepest node greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
-		f = SteepestNodeGreedyCycle
-	case "segc": // steepest edge greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
-		f = SteepestEdgeGreedyCycle
-	case "gngc": // greedy node greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą wierzchołków w cyklu
-		f = GreedyNodeGreedyCycle
-	case "gegc": // greedy edge greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja stroma lokalnego przeszukiwania z wymianą krawędzi w cyklu
-		f = GreedyEdgeGreedyCycle
-	case "rwr": // random walk random - losowe rozwiązenie początkowe, wersja losowego błądzenia lokalnego przeszukiwania
-		f = RandomWalkRandom
-	case "rwgc": // random walk greedy cycle - wynik greedy cycle to rozwiązanie początkowe, wersja losowego błądzenia lokalnego przeszukiwania
-		f = RandomWalkGreedyCycle
 	default:
 		f = InOrder
 	}
@@ -66,16 +46,32 @@ func Solve(nodes []reader.Node, algorithm string, distance_matrix [][]int) ([][]
 	if err != nil {
 		return nil, err
 	}
-	err = ValidateOrder(order, nodes)
-	if err != nil {
-		return order, err
-	}
 
 	return order, nil
 }
 
-func Local_search(order [][]int, algorithm string, distance_matrix [][]int) ([][]int, error){
-	panic("Dupa")
+func Local_search(start_order [][]int, algorithm string, distance_matrix [][]int) ([][]int, error) {
+	var order [][]int = make([][]int, NumCycles)
+	copy(order, start_order)
+	order = append(start_order[:0:0], start_order...)
+	var f func([][]int, [][]int) error
+	switch algorithm {
+	case "sn":
+		f = SteepestNode
+	case "se":
+		f = SteepestEdge
+	case "gn":
+		f = GreedyNode
+	case "ge":
+		f = GreedyEdge
+	default:
+		f = SteepestEdge
+	}
+	err := f(distance_matrix, order)
+	if err != nil {
+        return nil, err
+    }
+	return order, nil
 }
 
 func EucDist(a, b reader.Node) int {
@@ -154,8 +150,3 @@ func ValidateOrder(order [][]int, nodes []reader.Node) error {
 }
 
 // zwraca kolejnych indeksów wierzchołków z nodes w kolejności odwiedzania w cyklu
-
-
-
-
-

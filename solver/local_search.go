@@ -179,7 +179,6 @@ func DistancesBefore(distance_matrix [][]int, order [][]int) [][]int {
 
 	for i := range distances_before { // dla każdego cyklu
 		distances_before[i] = make([]int, len(order[i]))
-
 		for j := range distances_before[i] { // dla każdego wierzchołka w cyklu
 			curr_node := order[i][j]
 			// dystans do wierzchołka przed i po aktualnym
@@ -227,7 +226,6 @@ func AllMovesBetweenCyclesNoDistance(order [][]int) ([]SwapMove, error) {
 	var (
 		moves []SwapMove // aktualnie dostępne ruchy
 	)
-
 	for i := 0; i < len(order[0]); i++ {
 		for j := 0; j < len(order[1]); j++ {
 			// zamiana wierzchołka i z cyklu 1 z j z cyklu 2
@@ -259,7 +257,6 @@ func AllMovesNodesCycle(distance_matrix [][]int, order []int, cycle int, distanc
 			bj := utils.ElemBefore(order, j) // wierzchołek przed j w cyklu
 			ai := utils.ElemAfter(order, i)  // wierzchołek po i w cyklu
 			aj := utils.ElemAfter(order, j)  // wierzchołek po j w cyklu
-
 			if bi == n2 { // jeśli wierzchołki są sąsiadami w cyklu (j przed i)
 				delta = distance_matrix[n1][bj] + distance_matrix[n2][ai] - // dystansy od wierzchołków przed i po aktualnych po zamianie
 					distance_matrix[n1][ai] - distance_matrix[n2][bj] // dystansy od wierzchołków przed i po aktualnych przed zamianą
@@ -307,14 +304,51 @@ func AllMovesNodesCycleNoDistance(order []int, cycle int) []MoveNode {
 	return moves_node
 }
 
-func AllMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int, distances_before []int) []MoveEdge {
-	panic("not implemented") // TODO: implement
-	return nil
+func AllMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []MoveEdge {
+	var (
+		n1         int        // wierzchołek 1
+		n2         int        // wierzchołek 2
+		delta      int        // zmiana długości cyklu po dodaniu krawędzi
+		moves_node []MoveEdge // aktualnie dostępne ruchy
+	)
+
+	// dla każdej pary wierzchołków w cyklu; kolejność nie ma znaczenia
+	for i := 0; i < len(order); i++ {
+		for j := i + 1; j < len(order); j++ {
+			n1, n2 = order[i], order[j] // wierzchołki 1 i 2 - nr w cyklu
+			ai := utils.ElemAfter(order, i)
+			aj := utils.ElemAfter(order, j)
+			delta = distance_matrix[n1][n2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
+			distance_matrix[ai][n1] + distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
+			moves_node = append(moves_node, MoveEdge{
+				N1: n1,
+				N2: n2,
+				Delta: delta,
+                Cycle: cycle,
+			})
+		}
+	}
+	return moves_node
 }
 
 func AllMovesEdgesCycleNoDistance(order []int, cycle int) []MoveEdge {
-	panic("not implemented") // TODO: implement
-	return nil
+	var (
+		moves_node []MoveEdge // aktualnie dostępne ruchy
+	)
+
+	// dla każdej pary wierzchołków w cyklu; kolejność nie ma znaczenia
+	for i := 0; i < len(order); i++ {
+		for j := i + 1; j < len(order); j++ {
+			// dodaj ruch do listy
+			moves_node = append(moves_node, MoveEdge{
+				Cycle: cycle,
+				N1:    i,
+				N2:    j,
+				Delta: math.MaxInt,
+			})
+		}
+	}
+	return moves_node
 }
 
 func SteepestNode(distance_matrix [][]int, order [][]int) error {
@@ -338,7 +372,6 @@ func SteepestNode(distance_matrix [][]int, order [][]int) error {
 		for i := range swap_moves {               // dla każdego ruchu
 			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
 		}
-
 		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
 		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
 			moves_cycle := AllMovesNodesCycle(distance_matrix, order[c], c, distances_before[c]) // wszystkie ruchy w cyklu zamiany wierzchołków
@@ -409,8 +442,6 @@ func GreedyNode(distance_matrix [][]int, order [][]int) error {
 	return nil
 }
 
-// TODO: SteepestEdge: implementacja AllMovesEdgesCycle i AllMovesEdgesCycleNoDistance -> to co SteepestNode ale AllMovesNodesCycle zamienić na AllMovesEdgesCycle
-// TODO: GreedyEdge: implementacja AllMovesEdgesCycle i AllMovesEdgesCycleNoDistance -> to co GreedyNode ale AllMovesNodesCycle zamienić na AllMovesEdgesCycle
 
 func SteepestEdge(distance_matrix [][]int, order [][]int) error {
 	var (
@@ -436,7 +467,7 @@ func SteepestEdge(distance_matrix [][]int, order [][]int) error {
 
 		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
 		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesEdgesCycle(distance_matrix, order[c], c, distances_before[c]) // wszystkie ruchy w cyklu zamiany wierzchołków
+			moves_cycle := AllMovesEdgesCycle(distance_matrix, order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
 
 			for m := range moves_cycle { // dla każdego ruchu
 				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
@@ -504,61 +535,6 @@ func GreedyEdge(distance_matrix [][]int, order [][]int) error {
 	return nil
 }
 
-func SteepestNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	Random(distance_matrix, order, nodes)
-	SteepestNode(distance_matrix, order)
-
-	return nil
-}
-
-func SteepestEdgeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	Random(distance_matrix, order, nodes)
-	SteepestEdge(distance_matrix, order)
-
-	return nil
-}
-
-func GreedyNodeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	Random(distance_matrix, order, nodes)
-	GreedyNode(distance_matrix, order)
-
-	return nil
-}
-
-func GreedyEdgeRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	Random(distance_matrix, order, nodes)
-	GreedyEdge(distance_matrix, order)
-
-	return nil
-}
-
-func SteepestNodeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	GreedyCycle(distance_matrix, order, nodes)
-	SteepestNode(distance_matrix, order)
-
-	return nil
-}
-
-func SteepestEdgeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	GreedyCycle(distance_matrix, order, nodes)
-	SteepestEdge(distance_matrix, order)
-
-	return nil
-}
-
-func GreedyNodeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	GreedyCycle(distance_matrix, order, nodes)
-	GreedyNode(distance_matrix, order)
-
-	return nil
-}
-
-func GreedyEdgeGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	GreedyCycle(distance_matrix, order, nodes)
-	GreedyEdge(distance_matrix, order)
-
-	return nil
-}
 
 func RandomWalkRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	Random(distance_matrix, order, nodes)

@@ -13,8 +13,8 @@ import (
 
 type Solution struct {
 	Result            [][]int       `json:"result"`
-	Start_Worst_Order [][]int       `json:"start_worst_order"`
-	Start_Best_Order  [][]int       `json:"start_best_order"`
+	Start_Worst_Order [][]int       `json:"start worst order"`
+	Start_Best_Order  [][]int       `json:"start best order"`
 	Worst_Order       [][]int       `json:"worst order"`
 	Best_Order        [][]int       `json:"best order"`
 	Nodes             []reader.Node `json:"unordered nodes"`
@@ -26,13 +26,12 @@ type Solution struct {
 // użycie: go run main.go <ścieżka_do_instancji> [algorytm]
 func main() {
 	var (
-		local_search  string
-		algorithm     string
-		neighbourhood string
+		local_search string
+		algorithm    string
 	)
 	args := os.Args[1:]
 	if len(args) == 0 {
-		fmt.Println("usage: go run main.go <path_to_instance> [algorithm] [local search method] [neighbourhood type]")
+		fmt.Println("usage: go run main.go <path_to_instance> [algorithm] [local search method]")
 		return
 	}
 	if len(args) > 1 {
@@ -53,7 +52,7 @@ func main() {
 		times           []time.Duration
 		times_seconds   []float64
 	)
-	num_of_rep := 10
+	num_of_rep := 1
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
@@ -67,19 +66,36 @@ func main() {
 		worst_order       [][]int
 		start_best_order  [][]int
 		start_worst_order [][]int
+		start_order       [][]int
+		order             [][]int
 		longest_time      time.Duration = time.Duration(0)
 		shortest_time     time.Duration = time.Duration(math.MaxInt64)
 		start_time        time.Time
 		elapsed           time.Duration
+		copy_order        [][]int = make([][]int, solver.NumCycles)
 	)
 	best_score := -1
 	worst_score := -1
+	
 	for i := 0; i < num_of_rep; i++ {
 		fmt.Printf("Trial: %d\n", i+1)
 		start_time = time.Now()
-		start_order, err := solver.Solve(nodes, algorithm, distance_matrix)
-		panic("Dupa")
+		start_order, err = solver.Solve(nodes, algorithm, distance_matrix)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		copy_order[0] = make([]int, len(start_order[0]))
+		copy_order[1] = make([]int, len(start_order[1]))
+		copy(copy_order[0], start_order[0])
+		copy(copy_order[1], start_order[1])
+		order, err = solver.Local_search(copy_order, local_search, distance_matrix)
 		elapsed = time.Since(start_time)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = solver.ValidateOrder(order, nodes)
 		if err != nil {
 			fmt.Println(err)
 			return
