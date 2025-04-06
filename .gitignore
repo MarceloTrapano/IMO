@@ -1,5 +1,5 @@
 *.json
-
+*.tsp
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -13,6 +13,8 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+plots/
+results/
 downloads/
 eggs/
 .eggs/

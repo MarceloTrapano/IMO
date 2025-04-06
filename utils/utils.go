@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"zad1/reader"
+	"IMO/reader"
 )
 
 type Edge struct {

@@ -3,22 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
-	"time"
 	"zad1/reader"
 	"zad1/solver"
 	"zad1/utils"
 )
 
 type Solution struct {
-	Result        [][]int       `json:"result"`
-	Worst_Order   [][]int       `json:"worst order"`
-	Best_Order    [][]int       `json:"best order"`
-	Nodes         []reader.Node `json:"unordered nodes"`
-	Times         []float64     `json:"times"`
-	Longest_Time  float64       `json:"longest time"`
-	Shortest_Time float64       `json:"shortest time"`
+	Result      [][]int       `json:"result"`
+	Worst_Order [][]int       `json:"worst order"`
+	Best_Order  [][]int       `json:"best order"`
+	Nodes       []reader.Node `json:"unordered nodes"`
 }
 
 // użycie: go run main.go <ścieżka_do_instancji> [algorytm]
@@ -43,10 +38,8 @@ func main() {
 	var (
 		distance_matrix [][]int = make([][]int, len(nodes))
 		results         [][]int = make([][]int, 2)
-		times           []time.Duration
-		times_seconds   []float64
 	)
-	num_of_rep := 10
+	num_of_rep := 100
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
@@ -56,20 +49,14 @@ func main() {
 	results[0] = make([]int, num_of_rep)
 	results[1] = make([]int, num_of_rep)
 	var (
-		best_order    [][]int
-		worst_order   [][]int
-		longest_time  time.Duration = time.Duration(0)
-		shortest_time time.Duration = time.Duration(math.MaxInt64)
-		start_time    time.Time
-		elapsed       time.Duration
+		best_order  [][]int
+		worst_order [][]int
 	)
 	best_score := -1
 	worst_score := -1
 	for i := 0; i < num_of_rep; i++ {
-		fmt.Printf("Trial: %d\n", i+1)
-		start_time = time.Now()
+		fmt.Printf("Trial: %d\n",i+1)
 		order, err := solver.Solve(nodes, algorithm)
-		elapsed = time.Since(start_time)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -84,23 +71,11 @@ func main() {
 			best_score = results[0][i] + results[1][i]
 			best_order = append(order[:0:0], order...)
 		}
-		if elapsed > longest_time {
-			longest_time = elapsed
-		}
-		if elapsed < shortest_time {
-			shortest_time = elapsed
-		}
-		times = append(times, elapsed)
-		times_seconds = append(times_seconds, elapsed.Seconds())
 	}
 
-	fmt.Printf("Times Duration: %v\n", times)
-	fmt.Printf("Longest time millis: %v\n", longest_time.Milliseconds())
-	fmt.Printf("Shortest time seconds: %v\n", shortest_time.Seconds()) // chyba to najlepiej - dodane do Solution
-
-	solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes, Times: times_seconds, Longest_Time: longest_time.Seconds(), Shortest_Time: shortest_time.Seconds()}
+	solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes}
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("res_WREG_Rand_10_testkroA200.json", finalJson, 0644)
+	os.WriteFile("Dupa.json", finalJson, 0644)
 }
