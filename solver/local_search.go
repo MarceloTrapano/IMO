@@ -118,8 +118,13 @@ func SteepestNode(distance_matrix [][]int, order [][]int) error {
 	return nil
 }
 func RandomWalk(distance_matrix [][]int, order [][]int) error {
-	var move Move
-	for dummy := 0; dummy < 10_000_000; dummy++ {
+	var (
+		move           Move
+		current_length int = utils.CalculateCycleLen(order[0], distance_matrix) + utils.CalculateCycleLen(order[1], distance_matrix)
+		save_order [][]int
+	)
+	copy(save_order, order)
+	for dummy := 0; dummy < 400_000; dummy++ {
 		move_type := rand.Intn(3)
 		switch move_type {
 		case 0: // zamiana wierzchołków wewnątrz cyklu
@@ -136,10 +141,14 @@ func RandomWalk(distance_matrix [][]int, order [][]int) error {
 			n1 := rand.Intn(len(order[0]))
 			n2 := rand.Intn(len(order[1]))
 			move = &SwapMove{N1: n1, N2: n2, Delta: 0}
-
 		}
 		move.ExecuteMove(order)
+		new_current_length := utils.CalculateCycleLen(order[0], distance_matrix) + utils.CalculateCycleLen(order[1], distance_matrix) // aktualizuj długość cyklu
+		if new_current_length < current_length {
+			copy(save_order, order)
+		}
 	}
+	copy(order,save_order)
 	return nil
 }
 func GreedyNode(distance_matrix [][]int, order [][]int) error {
