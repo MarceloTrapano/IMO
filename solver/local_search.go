@@ -4,6 +4,7 @@ import (
 	"IMO/utils"
 	"math"
 	"math/rand"
+	"time"
 )
 
 // ruch - zamiana wierzchołka N1 z N2 w cyklu Cycle
@@ -120,11 +121,16 @@ func SteepestNode(distance_matrix [][]int, order [][]int) error {
 func RandomWalk(distance_matrix [][]int, order [][]int) error {
 	var (
 		move           Move
-		current_length int = utils.CalculateCycleLen(order[0], distance_matrix) + utils.CalculateCycleLen(order[1], distance_matrix)
-		save_order     [][]int
+		current_length int     = utils.CalculateCycleLen(order[0], distance_matrix) + utils.CalculateCycleLen(order[1], distance_matrix)
+		save_order     [][]int = make([][]int, NumCycles) // kolejność odwiedzania wierzchołków dla obydwu cykli
 	)
-	copy(save_order, order)
-	for dummy := 0; dummy < 400_000; dummy++ {
+	// kopiowanie tablic (kopie elementów) a nie całej macierzy (kopie tablic - wskaźniki) bo referencja
+	for so := range save_order {
+		save_order[so] = make([]int, len(order[so]))
+		copy(save_order[so], order[so])
+	}
+	start := time.Now()
+	for elapsed := time.Since(start); elapsed < 1538*time.Millisecond; elapsed = time.Since(start) {
 		move_type := rand.Intn(3)
 		switch move_type {
 		case 0: // zamiana wierzchołków wewnątrz cyklu
@@ -145,7 +151,10 @@ func RandomWalk(distance_matrix [][]int, order [][]int) error {
 		move.ExecuteMove(order)
 		new_current_length := utils.CalculateCycleLen(order[0], distance_matrix) + utils.CalculateCycleLen(order[1], distance_matrix) // aktualizuj długość cyklu
 		if new_current_length < current_length {
-			copy(save_order, order)
+			for so := range save_order {
+				copy(save_order[so], order[so])
+			}
+			current_length = new_current_length
 		}
 	}
 	copy(order, save_order)
@@ -536,8 +545,8 @@ func AllMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []MoveE
 			delta = distance_matrix[n1][n2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
 				distance_matrix[ai][n1] - distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
 			moves_node = append(moves_node, MoveEdge{
-				N1:    n1,
-				N2:    n2,
+				N1:    i,
+				N2:    j,
 				Delta: delta,
 				Cycle: cycle,
 			})
