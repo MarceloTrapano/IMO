@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"zad1/reader"
-	"zad1/solver"
-	"zad1/utils"
+	"IMO/reader"
+	"IMO/solver"
+	"IMO/utils"
 )
 
 type Solution struct {
@@ -54,9 +54,15 @@ func main() {
 	)
 	best_score := -1
 	worst_score := -1
+	for i := range distance_matrix {
+		distance_matrix[i] = make([]int, len(nodes))
+		for j := range distance_matrix[i] {
+			distance_matrix[i][j] = solver.EucDist(nodes[i], nodes[j])
+		}
+	}
 	for i := 0; i < num_of_rep; i++ {
 		fmt.Printf("Trial: %d\n",i+1)
-		order, err := solver.Solve(nodes, algorithm)
+		order, err := solver.Solve(nodes, algorithm, distance_matrix)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -77,5 +83,5 @@ func main() {
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("Dupa.json", finalJson, 0644)
+	os.WriteFile("Test.json", finalJson, 0644)
 }

@@ -52,7 +52,7 @@ func main() {
 		times           []time.Duration
 		times_seconds   []float64
 	)
-	num_of_rep := 1
+	num_of_rep := 100
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
