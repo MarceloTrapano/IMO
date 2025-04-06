@@ -64,6 +64,8 @@ func Local_search(start_order [][]int, algorithm string, distance_matrix [][]int
 		f = GreedyNode
 	case "ge":
 		f = GreedyEdge
+	case "rw":
+		f = RandomWalk
 	default:
 		f = SteepestEdge
 	}

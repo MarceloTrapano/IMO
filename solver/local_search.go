@@ -1,7 +1,6 @@
 package solver
 
 import (
-	"IMO/reader"
 	"IMO/utils"
 	"math"
 	"math/rand"
@@ -72,6 +71,213 @@ func (m *MoveEdge) GetDelta() int {
 
 func (m *MoveEdge) SetDelta(delta int) {
 	m.Delta = delta
+}
+
+func SteepestNode(distance_matrix [][]int, order [][]int) error {
+	var (
+		best_move       Move   = nil                                                // najlepszy ruch w iteracji
+		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
+		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
+		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
+		current_length  int    = current_length1 + current_length2
+		all_moves       []Move // aktualnie dostępne ruchy
+	)
+
+	for {
+		// ruchy pomiędzy cyklami
+		distances_before := DistancesBefore(distance_matrix, order)                        // dystans do wierzchołków przed i po aktualnym w cyklu
+		swap_moves, err := AllMovesBetweenCycles(distance_matrix, order, distances_before) // wszystkie ruchy między cyklami
+		if err != nil {
+			return err
+		}
+		all_moves = make([]Move, len(swap_moves)) // lista ruchów
+		for i := range swap_moves {               // dla każdego ruchu
+			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
+		}
+		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
+		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
+			moves_cycle := AllMovesNodesCycle(distance_matrix, order[c], c, distances_before[c]) // wszystkie ruchy w cyklu zamiany wierzchołków
+
+			for m := range moves_cycle { // dla każdego ruchu
+				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
+			}
+		}
+		best_move, min_delta = FindBestMove(all_moves) // najlepszy ruch i minimalna zmiana długości cyklu
+
+		// koniec iteracji
+		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
+			best_move = nil // ustaw najlepszy ruch na nil
+			break
+		}
+		// jeśli znaleziono ruch, to wykonaj go
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
+		best_move, min_delta = nil, math.MaxInt     // ustaw najlepszy ruch na nil i delta MaxInt
+	}
+
+	return nil
+}
+func RandomWalk(distance_matrix [][]int, order [][]int) error {
+	var move Move
+	for dummy := 0; dummy < 10_000_000; dummy++ {
+		move_type := rand.Intn(3)
+		switch move_type {
+		case 0: // zamiana wierzchołków wewnątrz cyklu
+			cycle := rand.Intn(2)
+			n1 := rand.Intn(len(order[cycle]))
+			n2 := rand.Intn(len(order[cycle]))
+			move = &MoveNode{Cycle: cycle, N1: n1, N2: n2, Delta: 0}
+		case 1: // zamiana krawędzi wewnątrz cyklu
+			cycle := rand.Intn(2)
+			n1 := rand.Intn(len(order[cycle]))
+			n2 := rand.Intn(len(order[cycle]))
+			move = &MoveEdge{Cycle: cycle, N1: n1, N2: n2, Delta: 0}
+		case 2: // zamiana wierzchołków między cyklami
+			n1 := rand.Intn(len(order[0]))
+			n2 := rand.Intn(len(order[1]))
+			move = &SwapMove{N1: n1, N2: n2, Delta: 0}
+
+		}
+		move.ExecuteMove(order)
+	}
+	return nil
+}
+func GreedyNode(distance_matrix [][]int, order [][]int) error {
+	var (
+		best_move       Move   = nil                                                // najlepszy ruch w iteracji
+		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
+		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
+		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
+		current_length  int    = current_length1 + current_length2
+		all_moves       []Move // aktualnie dostępne ruchy
+	)
+
+	for {
+		// ruchy pomiędzy cyklami
+		swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
+		if err != nil {
+			return err
+		}
+		all_moves = make([]Move, len(swap_moves)) // lista ruchów
+		for i := range swap_moves {               // dla każdego ruchu
+			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
+		}
+
+		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
+		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
+			moves_cycle := AllMovesNodesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
+
+			for m := range moves_cycle { // dla każdego ruchu
+				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
+			}
+		}
+		best_move, min_delta = FindBestMoveGreedy(all_moves, distance_matrix, order) // najlepszy ruch i minimalna zmiana długości cyklu
+
+		// koniec iteracji
+		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
+			best_move = nil // ustaw najlepszy ruch na nil
+			break
+		}
+		// jeśli znaleziono ruch, to wykonaj go
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
+
+		best_move, min_delta = nil, math.MaxInt // ustaw najlepszy ruch na nil i delta MaxInt
+	}
+
+	return nil
+}
+
+func SteepestEdge(distance_matrix [][]int, order [][]int) error {
+	var (
+		best_move       Move   = nil                                                // najlepszy ruch w iteracji
+		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
+		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
+		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
+		current_length  int    = current_length1 + current_length2
+		all_moves       []Move // aktualnie dostępne ruchy
+	)
+
+	for {
+		// ruchy pomiędzy cyklami
+		distances_before := DistancesBefore(distance_matrix, order)                        // dystans do wierzchołków przed i po aktualnym w cyklu
+		swap_moves, err := AllMovesBetweenCycles(distance_matrix, order, distances_before) // wszystkie ruchy między cyklami
+		if err != nil {
+			return err
+		}
+		all_moves = make([]Move, len(swap_moves)) // lista ruchów
+		for i := range swap_moves {               // dla każdego ruchu
+			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
+		}
+
+		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
+		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
+			moves_cycle := AllMovesEdgesCycle(distance_matrix, order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
+
+			for m := range moves_cycle { // dla każdego ruchu
+				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
+			}
+		}
+		best_move, min_delta = FindBestMove(all_moves) // najlepszy ruch i minimalna zmiana długości cyklu
+
+		// koniec iteracji
+		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
+			best_move = nil // ustaw najlepszy ruch na nil
+			break
+		}
+		// jeśli znaleziono ruch, to wykonaj go
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
+		best_move, min_delta = nil, math.MaxInt     // ustaw najlepszy ruch na nil i delta MaxInt
+	}
+
+	return nil
+}
+
+func GreedyEdge(distance_matrix [][]int, order [][]int) error {
+	var (
+		best_move       Move   = nil                                                // najlepszy ruch w iteracji
+		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
+		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
+		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
+		current_length  int    = current_length1 + current_length2
+		all_moves       []Move // aktualnie dostępne ruchy
+	)
+
+	for {
+		// ruchy pomiędzy cyklami
+		swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
+		if err != nil {
+			return err
+		}
+		all_moves = make([]Move, len(swap_moves)) // lista ruchów
+		for i := range swap_moves {               // dla każdego ruchu
+			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
+		}
+
+		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
+		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
+			moves_cycle := AllMovesEdgesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
+
+			for m := range moves_cycle { // dla każdego ruchu
+				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
+			}
+		}
+		best_move, min_delta = FindBestMoveGreedy(all_moves, distance_matrix, order) // najlepszy ruch i minimalna zmiana długości cyklu
+
+		// koniec iteracji
+		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
+			best_move = nil // ustaw najlepszy ruch na nil
+			break
+		}
+		// jeśli znaleziono ruch, to wykonaj go
+		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
+		current_length = current_length + min_delta // aktualizuj długość cyklu
+
+		best_move, min_delta = nil, math.MaxInt // ustaw najlepszy ruch na nil i delta MaxInt
+	}
+
+	return nil
 }
 
 func CalculateDelta(move Move, distance_matrix [][]int, order [][]int) int {
@@ -257,7 +463,7 @@ func AllMovesNodesCycle(distance_matrix [][]int, order []int, cycle int, distanc
 			bj := utils.ElemBefore(order, j) // wierzchołek przed j w cyklu
 			ai := utils.ElemAfter(order, i)  // wierzchołek po i w cyklu
 			aj := utils.ElemAfter(order, j)  // wierzchołek po j w cyklu
-			if bi == n2 { // jeśli wierzchołki są sąsiadami w cyklu (j przed i)
+			if bi == n2 {                    // jeśli wierzchołki są sąsiadami w cyklu (j przed i)
 				delta = distance_matrix[n1][bj] + distance_matrix[n2][ai] - // dystansy od wierzchołków przed i po aktualnych po zamianie
 					distance_matrix[n1][ai] - distance_matrix[n2][bj] // dystansy od wierzchołków przed i po aktualnych przed zamianą
 			} else if ai == n2 { // jeśli wierzchołki są sąsiadami w cyklu (i przed j)
@@ -319,12 +525,12 @@ func AllMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []MoveE
 			ai := utils.ElemAfter(order, i)
 			aj := utils.ElemAfter(order, j)
 			delta = distance_matrix[n1][n2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
-			distance_matrix[ai][n1] + distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
+				distance_matrix[ai][n1] + distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
 			moves_node = append(moves_node, MoveEdge{
-				N1: n1,
-				N2: n2,
+				N1:    n1,
+				N2:    n2,
 				Delta: delta,
-                Cycle: cycle,
+				Cycle: cycle,
 			})
 		}
 	}
@@ -349,205 +555,4 @@ func AllMovesEdgesCycleNoDistance(order []int, cycle int) []MoveEdge {
 		}
 	}
 	return moves_node
-}
-
-func SteepestNode(distance_matrix [][]int, order [][]int) error {
-	var (
-		best_move       Move   = nil                                                // najlepszy ruch w iteracji
-		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
-		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
-		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
-		current_length  int    = current_length1 + current_length2
-		all_moves       []Move // aktualnie dostępne ruchy
-	)
-
-	for {
-		// ruchy pomiędzy cyklami
-		distances_before := DistancesBefore(distance_matrix, order)                        // dystans do wierzchołków przed i po aktualnym w cyklu
-		swap_moves, err := AllMovesBetweenCycles(distance_matrix, order, distances_before) // wszystkie ruchy między cyklami
-		if err != nil {
-			return err
-		}
-		all_moves = make([]Move, len(swap_moves)) // lista ruchów
-		for i := range swap_moves {               // dla każdego ruchu
-			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
-		}
-		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
-		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesNodesCycle(distance_matrix, order[c], c, distances_before[c]) // wszystkie ruchy w cyklu zamiany wierzchołków
-
-			for m := range moves_cycle { // dla każdego ruchu
-				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
-			}
-		}
-		best_move, min_delta = FindBestMove(all_moves) // najlepszy ruch i minimalna zmiana długości cyklu
-
-		// koniec iteracji
-		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
-			best_move = nil // ustaw najlepszy ruch na nil
-			break
-		}
-		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
-		current_length = current_length + min_delta // aktualizuj długość cyklu
-		best_move, min_delta = nil, math.MaxInt     // ustaw najlepszy ruch na nil i delta MaxInt
-	}
-
-	return nil
-}
-
-func GreedyNode(distance_matrix [][]int, order [][]int) error {
-	var (
-		best_move       Move   = nil                                                // najlepszy ruch w iteracji
-		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
-		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
-		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
-		current_length  int    = current_length1 + current_length2
-		all_moves       []Move // aktualnie dostępne ruchy
-	)
-
-	for {
-		// ruchy pomiędzy cyklami
-		swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
-		if err != nil {
-			return err
-		}
-		all_moves = make([]Move, len(swap_moves)) // lista ruchów
-		for i := range swap_moves {               // dla każdego ruchu
-			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
-		}
-
-		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
-		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesNodesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
-
-			for m := range moves_cycle { // dla każdego ruchu
-				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
-			}
-		}
-		best_move, min_delta = FindBestMoveGreedy(all_moves, distance_matrix, order) // najlepszy ruch i minimalna zmiana długości cyklu
-
-		// koniec iteracji
-		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
-			best_move = nil // ustaw najlepszy ruch na nil
-			break
-		}
-		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
-		current_length = current_length + min_delta // aktualizuj długość cyklu
-
-		best_move, min_delta = nil, math.MaxInt // ustaw najlepszy ruch na nil i delta MaxInt
-	}
-
-	return nil
-}
-
-
-func SteepestEdge(distance_matrix [][]int, order [][]int) error {
-	var (
-		best_move       Move   = nil                                                // najlepszy ruch w iteracji
-		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
-		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
-		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
-		current_length  int    = current_length1 + current_length2
-		all_moves       []Move // aktualnie dostępne ruchy
-	)
-
-	for {
-		// ruchy pomiędzy cyklami
-		distances_before := DistancesBefore(distance_matrix, order)                        // dystans do wierzchołków przed i po aktualnym w cyklu
-		swap_moves, err := AllMovesBetweenCycles(distance_matrix, order, distances_before) // wszystkie ruchy między cyklami
-		if err != nil {
-			return err
-		}
-		all_moves = make([]Move, len(swap_moves)) // lista ruchów
-		for i := range swap_moves {               // dla każdego ruchu
-			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
-		}
-
-		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
-		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesEdgesCycle(distance_matrix, order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
-
-			for m := range moves_cycle { // dla każdego ruchu
-				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
-			}
-		}
-		best_move, min_delta = FindBestMove(all_moves) // najlepszy ruch i minimalna zmiana długości cyklu
-
-		// koniec iteracji
-		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
-			best_move = nil // ustaw najlepszy ruch na nil
-			break
-		}
-		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
-		current_length = current_length + min_delta // aktualizuj długość cyklu
-		best_move, min_delta = nil, math.MaxInt     // ustaw najlepszy ruch na nil i delta MaxInt
-	}
-
-	return nil
-}
-
-func GreedyEdge(distance_matrix [][]int, order [][]int) error {
-	var (
-		best_move       Move   = nil                                                // najlepszy ruch w iteracji
-		min_delta       int    = math.MaxInt                                        // minimalna zmiana długości cyklu
-		current_length1 int    = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
-		current_length2 int    = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
-		current_length  int    = current_length1 + current_length2
-		all_moves       []Move // aktualnie dostępne ruchy
-	)
-
-	for {
-		// ruchy pomiędzy cyklami
-		swap_moves, err := AllMovesBetweenCyclesNoDistance(order) // wszystkie ruchy między cyklami
-		if err != nil {
-			return err
-		}
-		all_moves = make([]Move, len(swap_moves)) // lista ruchów
-		for i := range swap_moves {               // dla każdego ruchu
-			all_moves[i] = &swap_moves[i] // dodaj ruch do listy
-		}
-
-		// ruchy w obrębie cyklu - zamiana wierzchołków w cyklu
-		for c := 0; c < NumCycles; c++ { // dla każdego cyklu
-			moves_cycle := AllMovesEdgesCycleNoDistance(order[c], c) // wszystkie ruchy w cyklu zamiany wierzchołków
-
-			for m := range moves_cycle { // dla każdego ruchu
-				all_moves = append(all_moves, &moves_cycle[m]) // dodaj ruch do listy
-			}
-		}
-		best_move, min_delta = FindBestMoveGreedy(all_moves, distance_matrix, order) // najlepszy ruch i minimalna zmiana długości cyklu
-
-		// koniec iteracji
-		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
-			best_move = nil // ustaw najlepszy ruch na nil
-			break
-		}
-		// jeśli znaleziono ruch, to wykonaj go
-		best_move.ExecuteMove(order)                // wykonaj najlepszy ruch
-		current_length = current_length + min_delta // aktualizuj długość cyklu
-
-		best_move, min_delta = nil, math.MaxInt // ustaw najlepszy ruch na nil i delta MaxInt
-	}
-
-	return nil
-}
-
-
-func RandomWalkRandom(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	Random(distance_matrix, order, nodes)
-	panic("not implemented") // TODO: implement
-	// TODO: RandomWalk
-
-	return nil
-}
-
-func RandomWalkGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
-	GreedyCycle(distance_matrix, order, nodes)
-	panic("not implemented") // TODO: implement
-	// TODO: RandomWalk
-
-	return nil
 }
