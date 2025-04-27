@@ -71,8 +71,28 @@ func Local_search(start_order [][]int, algorithm string, distance_matrix [][]int
 	}
 	err := f(distance_matrix, order)
 	if err != nil {
-        return nil, err
-    }
+		return nil, err
+	}
+	return order, nil
+}
+
+func LocalSearchOptimization(start_order [][]int, algorithm string, distance_matrix [][]int) ([][]int, error) {
+	var order [][]int = make([][]int, NumCycles)
+	copy(order, start_order)
+	order = append(start_order[:0:0], start_order...)
+	var f func([][]int, [][]int) error
+	switch algorithm {
+	case "fls":
+		f = FastLocalSearch
+	case "cs":
+		f = CandidateSearch
+	default:
+		panic("unknown optimization algorithm")
+	}
+	err := f(distance_matrix, order)
+	if err != nil {
+		return nil, err
+	}
 	return order, nil
 }
 
