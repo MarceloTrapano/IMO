@@ -1,12 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
 	"IMO/reader"
 	"IMO/solver"
 	"IMO/utils"
+	"fmt"
+	"os"
 )
 
 type Solution struct {
@@ -39,7 +38,7 @@ func main() {
 		distance_matrix [][]int = make([][]int, len(nodes))
 		results         [][]int = make([][]int, 2)
 	)
-	num_of_rep := 100
+	num_of_rep := 1
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
@@ -54,19 +53,21 @@ func main() {
 	)
 	best_score := -1
 	worst_score := -1
-	for i := range distance_matrix {
-		distance_matrix[i] = make([]int, len(nodes))
-		for j := range distance_matrix[i] {
-			distance_matrix[i][j] = solver.EucDist(nodes[i], nodes[j])
-		}
-	}
+	// for i := range distance_matrix {
+	// 	distance_matrix[i] = make([]int, len(nodes))
+	// 	for j := range distance_matrix[i] {
+	// 		distance_matrix[i][j] = solver.EucDist(nodes[i], nodes[j])
+	// 	}
+	// }
 	for i := 0; i < num_of_rep; i++ {
-		fmt.Printf("Trial: %d\n",i+1)
+		fmt.Printf("Trial: %d\n", i+1)
 		order, err := solver.Solve(nodes, algorithm, distance_matrix)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
+		_ = solver.FastLocalSearch(distance_matrix, order)
+
 		results[0][i] = utils.CalculateCycleLen(order[0], distance_matrix)
 		results[1][i] = utils.CalculateCycleLen(order[1], distance_matrix)
 		if results[0][i]+results[1][i] > worst_score {
@@ -80,8 +81,9 @@ func main() {
 	}
 
 	solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes}
+	fmt.Println(solution)
 
-	finalJson, _ := json.MarshalIndent(solution, "", "\t")
+	// finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("Test.json", finalJson, 0644)
+	// os.WriteFile("Test.json", finalJson, 0644)
 }

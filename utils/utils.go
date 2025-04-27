@@ -1,11 +1,11 @@
 package utils
 
 import (
+	"IMO/reader"
 	"bytes"
 	"fmt"
 	"math"
 	"slices"
-	"IMO/reader"
 )
 
 type Edge struct {
@@ -174,8 +174,8 @@ func MatrixMax(matrix [][]int) (int, int, int) {
 	return x, y, max
 }
 
-func Insert(array []int, i int, j int) []int {
-	var new_arr []int = make([]int, len(array)+1)
+func Insert[T comparable](array []T, i int, j T) []T {
+	var new_arr []T = make([]T, len(array)+1)
 	if i < 0 || i >= len(array) {
 		panic("Index out of range")
 	}
@@ -257,4 +257,37 @@ func ElemAfter(arr []int, i int) int {
 		return arr[0]
 	}
 	return arr[i+1]
+}
+
+func IndexOf(arr []int, value int) int {
+	for i, v := range arr {
+		if v == value {
+			return i
+		}
+	}
+	return -1
+}
+
+func IndexesOf(arr []int, values []int) []int {
+	var indexes []int
+	for _, value := range values {
+		for i, v := range arr {
+			if v == value {
+				indexes = append(indexes, i)
+				break
+			}
+		}
+	}
+	return indexes
+}
+
+func RemoveIndexes[T comparable](s []T, index []int) []T {
+	ret := make([]T, 0)
+
+	for i := 0; i < len(s); i++ {
+		if !slices.Contains(index, i) {
+			ret = append(ret, s[i])
+		}
+	}
+	return ret
 }
