@@ -112,43 +112,16 @@ func FastLocalSearch(distance_matrix [][]int, order [][]int) error {
 	sort.Slice(best_moves, func(i, j int) bool {
 		return best_moves[i].GetDelta() < best_moves[j].GetDelta() // sortowanie po najwyższych deltach
 	})
-	// fmt.Println("Best moves: ")
-	// for _, move := range best_moves {
-	// 	fmt.Println(move)
-	// }
-	del := false
 
 	for len(best_moves) > 0 {
-		// distance_before := DistancesBefore(distance_matrix, order)
-		// swap_moves, err := BestMovesBetweenCycles(distance_matrix, order, distance_before) // wybieranie ruchów między cyklami poprawiających wynik
-		// if err != nil {
-		// 	return err
-		// }
-		// for m := range swap_moves {
-		// 	best_moves = append(best_moves, &swap_moves[m])
-		// }
-		// for c := 0; c < NumCycles; c++ {
-		// 	moves_cycle := BestMovesEdgesCycle(distance_matrix, order[c], c) // wybieranie ruchów krawędzi poprawiających wynik
-		// 	for m := range moves_cycle {
-		// 		best_moves = append(best_moves, &moves_cycle[m])
-		// 	}
-		// }
-
-		// fmt.Println("Best moves: ")
-		// for _, move := range best_moves {
-		// 	fmt.Println(move)
-		// }
-		// fmt.Println("Best moves count: ", len(best_moves))
 		to_delete := []int{}  // indeksy do usunięcia
 		new_moves := []Move{} // nowe ruchy do dodania
-		// fmt.Println(new_moves)
 
 	Loop: // label loopa do breakowania
 		for i, move := range best_moves {
 			applicability := CheckApplicability(move, order)
 			switch applicability {
 			case Applicable:
-				del = false
 				move.ExecuteMove(order)
 
 				new_moves, err = FindNewMoves(distance_matrix, order, move) // znajdź nowe ruchy
@@ -162,39 +135,14 @@ func FastLocalSearch(distance_matrix [][]int, order [][]int) error {
 				to_delete = append(to_delete, i) // usuwamy - ruch nie jest aplikowalny
 			case MayBeApplicable: // nie usuwamy - ruch może być aplikowalny po czasie - krawędzie istnieją ale w drugą stronę
 			}
-
-			// if CheckApplicability(move, order) { // sprawdzenie czy ruch jest aplikowalny
-			// 	move.ExecuteMove(order)
-
-			// 	new_moves, err := FindNewMoves(distance_matrix, order, move) // znajdź nowe ruchy
-			// 	break
-			// } else {
-			// 	// dodaj do usunięcia - ruch nie jest aplikowalny
-			// 	to_delete = append(to_delete, i)
-			// }
-
-			if del && i == len(best_moves)-1 { // jak nie znajdzie ruchu aplikowalnego to przerywa
-				// fmt.Println("No more moves")
-				// fmt.Println("Best moves count: ", len(best_moves))
-				// fmt.Println("To delete: ", to_delete)
-				// fmt.Println("Orders: ")
-				// fmt.Println(order[0])
-				// fmt.Println(order[1])
-				// fmt.Println("Best moves: ")
-				// for _, move := range best_moves {
-				// 	fmt.Println(move)
-				// }
+			if i == len(best_moves)-1 { // jak nie znajdzie ruchu aplikowalnego to przerywa
 				return nil
-			}
-			if i == len(best_moves)-1 {
-				// fmt.Println("No more moves")
-				del = true // jeśli ostatni ruch to przerywamy
 			}
 		}
 		best_moves = utils.RemoveIndexes(best_moves, to_delete) // usuń ruchy, które nie są aplikowalne
 		best_moves = AddNewMoves(best_moves, new_moves)         // dodaj nowe ruchy
 	}
-	// fmt.Println("No more moves")
+
 	return nil
 }
 func BestMovesBetweenCycles(distance_matrix [][]int, order [][]int, distances_before [][]int) ([]SwapMoveDetail, error) {
@@ -249,9 +197,6 @@ func BestMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []Move
 			delta = distance_matrix[n1][n2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
 				distance_matrix[ai][n1] - distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
 			if delta < 0 {
-				// if n1 == n2 || ai == aj { // jeśli nie można zamienić krawędzi
-				// 	panic("BestMovesEdgesCycle: n1 == n2")
-				// }
 				moves_node = append(moves_node, MoveEdgeDetail{
 					N1:    n1,
 					N2:    n2,
@@ -271,7 +216,6 @@ func BestMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []Move
 			}
 		}
 	}
-	// fmt.Println("Doano {} ruchów z {} wszystkich, procent", dodano, all_moves, float64(dodano)/float64(all_moves))
 
 	return moves_node
 }
@@ -340,13 +284,7 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 		indexes_inner[0] = utils.IndexesOf(order[0], nodes_inner[0])                            // znajdź indeksy w cyklu
 		indexes_inner[1] = utils.IndexesOf(order[1], nodes_inner[1])                            // drugi cykl
 
-		// if len(indexes) != 6 {
-		// 	panic("FindNewMoves: indexes not found")
-		// }
-		// fmt.Println("SwapMove")
-
 	case *MoveEdgeDetail:
-		// fmt.Println("MoveEdge")
 		// nowe krawędzie: N1 - N2, SN1 - SN2, usunięcie krawędzi N1 - SN1, N2 - SN2
 		if m.Cycle == 0 {
 			nodes_inner[0] = []int{m.N1, m.SN1}
@@ -359,10 +297,6 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 		indexes_inner[1] = utils.IndexesOf(order[m.Cycle], nodes_inner[1]) // znajdź indeksy w cyklu
 		indexes_outer[0] = utils.IndexesOf(order[m.Cycle], nodes_outer[0]) // znajdź indeksy w cyklu
 		indexes_outer[1] = utils.IndexesOf(order[m.Cycle], nodes_outer[1]) // znajdź indeksy w cyklu
-		// if len(indexes) != 2 {
-		// 	panic("MoveEdgeDetail: indexes not found")
-		// }
-
 	}
 
 	for c, no := range nodes_outer {
@@ -387,9 +321,6 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 					distance_matrix[ai][n1] - distance_matrix[aj][n2] // dystansy po zamianie krawędzi
 				if delta < 0 {
 					// dodaj ruch do listy
-					// if n1 == n2 || ai == aj { // jeśli nie można zamienić krawędzi
-					// 	panic("FindNewMoves: n1 == n2")
-					// }
 					if cycle == 0 {
 						moves_node = append(moves_node, SwapMoveDetail{
 							N1:    n1,

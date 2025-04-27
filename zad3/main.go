@@ -4,6 +4,7 @@ import (
 	"IMO/reader"
 	"IMO/solver"
 	"IMO/utils"
+	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -38,7 +39,7 @@ func main() {
 		distance_matrix [][]int = make([][]int, len(nodes))
 		results         [][]int = make([][]int, 2)
 	)
-	num_of_rep := 1
+	num_of_rep := 100
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
@@ -81,9 +82,8 @@ func main() {
 	}
 
 	solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes}
-	fmt.Println(solution)
 
-	// finalJson, _ := json.MarshalIndent(solution, "", "\t")
+	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	// os.WriteFile("Test.json", finalJson, 0644)
+	os.WriteFile("Test.json", finalJson, 0644)
 }
