@@ -281,12 +281,18 @@ func IndexesOf[T comparable](arr []T, values []T) []int {
 	return indexes
 }
 
-func RemoveIndexes[T comparable](s []T, index []int) []T {
-	ret := make([]T, 0)
+type Empty struct{}
 
-	for i := 0; i < len(s); i++ {
-		if !slices.Contains(index, i) {
-			ret = append(ret, s[i])
+func RemoveIndexes[T comparable](s []T, index []int) []T {
+	indexSet := make(map[int]Empty, len(index))
+	for _, idx := range index {
+		indexSet[idx] = Empty{}
+	}
+
+	ret := make([]T, 0, len(s)-len(index)) // prealokacja
+	for i, v := range s {
+		if _, found := indexSet[i]; !found { // tylko sprawdzenie czy nie ma w mapie
+			ret = append(ret, v)
 		}
 	}
 	return ret

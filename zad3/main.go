@@ -67,7 +67,17 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		_ = solver.FastLocalSearch(distance_matrix, order)
+		err = solver.FastLocalSearch(distance_matrix, order)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		err = solver.ValidateOrder(order, nodes)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
 		results[0][i] = utils.CalculateCycleLen(order[0], distance_matrix)
 		results[1][i] = utils.CalculateCycleLen(order[1], distance_matrix)

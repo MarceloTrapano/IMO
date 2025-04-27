@@ -2,7 +2,6 @@ package solver
 
 import (
 	"IMO/utils"
-	"math"
 	"sort"
 )
 
@@ -304,10 +303,10 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 			i := indexes_outer[c][z] // indeks w cyklu
 
 			cycle := c
-			other_cycle := int(math.Abs(float64(cycle - 1))) // drugi cykl
-			bi := utils.ElemBefore(order[cycle], i)          // wierzchołek przed i w cyklu 1
-			ai := utils.ElemAfter(order[cycle], i)           // wierzchołek po i w cyklu 1
-			moves_node := []SwapMoveDetail{}                 // aktualnie dostępne ruchy
+			other_cycle := 1 - c                    // drugi cykl
+			bi := utils.ElemBefore(order[cycle], i) // wierzchołek przed i w cyklu 1
+			ai := utils.ElemAfter(order[cycle], i)  // wierzchołek po i w cyklu 1
+			moves_node := []SwapMoveDetail{}        // aktualnie dostępne ruchy
 
 			for j := 0; j < len(order[other_cycle]); j++ {
 				n2 := order[other_cycle][j]
