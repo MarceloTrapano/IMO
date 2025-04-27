@@ -2,7 +2,6 @@ package solver
 
 import (
 	"IMO/utils"
-	"fmt"
 	"math"
 	"sort"
 )
@@ -194,16 +193,8 @@ func FastLocalSearch(distance_matrix [][]int, order [][]int) error {
 		}
 		best_moves = utils.RemoveIndexes(best_moves, to_delete) // usuń ruchy, które nie są aplikowalne
 		best_moves = AddNewMoves(best_moves, new_moves)         // dodaj nowe ruchy
-		best_val := best_moves[0].GetDelta()                    // najlepsza zmiana
-		for _, move := range best_moves {
-			// fmt.Println(move)
-			if move.GetDelta() < best_val { // jeśli nowy ruch jest lepszy od najlepszego to dodaj go do najlepszych ruchów
-				panic("FastLocalSearch: new move is better than best move")
-			}
-			best_val = move.GetDelta()
-		}
 	}
-	fmt.Println("No more moves")
+	// fmt.Println("No more moves")
 	return nil
 }
 func BestMovesBetweenCycles(distance_matrix [][]int, order [][]int, distances_before [][]int) ([]SwapMoveDetail, error) {
@@ -248,8 +239,6 @@ func BestMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []Move
 		delta      int              // zmiana długości cyklu po dodaniu krawędzi
 		moves_node []MoveEdgeDetail // aktualnie dostępne ruchy
 	)
-	var dodano int = 0 // liczba dodanych ruchów
-	var all_moves int = 0
 
 	// dla każdej pary wierzchołków w cyklu; kolejność nie ma znaczenia
 	for i := 0; i < len(order); i++ {
@@ -260,10 +249,9 @@ func BestMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []Move
 			delta = distance_matrix[n1][n2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
 				distance_matrix[ai][n1] - distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
 			if delta < 0 {
-				dodano++
-				if n1 == n2 || ai == aj { // jeśli nie można zamienić krawędzi
-					panic("BestMovesEdgesCycle: n1 == n2")
-				}
+				// if n1 == n2 || ai == aj { // jeśli nie można zamienić krawędzi
+				// 	panic("BestMovesEdgesCycle: n1 == n2")
+				// }
 				moves_node = append(moves_node, MoveEdgeDetail{
 					N1:    n1,
 					N2:    n2,
@@ -281,7 +269,6 @@ func BestMovesEdgesCycle(distance_matrix [][]int, order []int, cycle int) []Move
 					Cycle: cycle,
 				})
 			}
-			all_moves++
 		}
 	}
 	// fmt.Println("Doano {} ruchów z {} wszystkich, procent", dodano, all_moves, float64(dodano)/float64(all_moves))
@@ -336,21 +323,53 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 		delta     int               // zmiana długości cyklu po dodaniu krawędzi)
 		new_moves []Move = []Move{} // nowe ruchy do dodania
 	)
+	nodes_inner := [2][]int{{}, {}} // wierzchołki do rozważenia po zmianach krawędzi, bierzemy pod uwagę nowe krawędzie N1-N2, SN1-SN2
+	nodes_outer := [2][]int{{}, {}} // wierzchołki cyklu 0 do rozważenia po zmianach krawędzi
+	indexes_inner := [2][]int{{}, {}}
+	indexes_outer := [2][]int{{}, {}}
 
 	switch m := move.(type) {
 	case *SwapMoveDetail:
 		// na nowo obliczyć dla wszystkich wierzchołków
-		nodes := []int{m.N2, m.SN1, m.PN1, m.N1, m.SN2, m.PN2}                             // wierzchołki do rozważenia przy nowych krawędziach, bierzemy pod uwagę nowe krawędzie N1-N2, SN1-SN2
-		indexes := utils.IndexesOf(order[0], []int{m.N2, m.SN1, m.PN1})                    // znajdź indeksy w cyklu
-		indexes = append(indexes, utils.IndexesOf(order[1], []int{m.N1, m.SN2, m.PN2})...) // znajdź indeksy w cyklu
-		if len(indexes) != 6 {
-			panic("FindNewMoves: indexes not found")
-		}
+		nodes_outer[0] = []int{m.N2, m.SN1, m.PN1}                                              // wierzchołki do rozważenia przy zamianie wierzchołków
+		nodes_outer[1] = []int{m.N1, m.SN2, m.PN2}                                              // drugi cykl
+		indexes_outer[0] = utils.IndexesOf(order[0], nodes_outer[0])                            // znajdź indeksy w cyklu
+		indexes_outer[1] = utils.IndexesOf(order[1], nodes_outer[1])                            // drugi cykl
+		nodes_inner[0] = []int{m.N2, utils.ElemBefore(order[0], utils.IndexOf(order[0], m.N2))} // wierzchołki do rozważenia przy zamianie wierzchołków
+		nodes_inner[1] = []int{m.N1, utils.ElemBefore(order[1], utils.IndexOf(order[1], m.N1))} // drugi cykl
+		indexes_inner[0] = utils.IndexesOf(order[0], nodes_inner[0])                            // znajdź indeksy w cyklu
+		indexes_inner[1] = utils.IndexesOf(order[1], nodes_inner[1])                            // drugi cykl
+
+		// if len(indexes) != 6 {
+		// 	panic("FindNewMoves: indexes not found")
+		// }
 		// fmt.Println("SwapMove")
 
-		for z, n1 := range nodes {
-			i := indexes[z] // indeks w cyklu
-			cycle := z / 3
+	case *MoveEdgeDetail:
+		// fmt.Println("MoveEdge")
+		// nowe krawędzie: N1 - N2, SN1 - SN2, usunięcie krawędzi N1 - SN1, N2 - SN2
+		if m.Cycle == 0 {
+			nodes_inner[0] = []int{m.N1, m.SN1}
+			nodes_outer[0] = []int{m.N1, m.N2, m.SN1, m.SN2}
+		} else {
+			nodes_inner[1] = []int{m.N1, m.SN1}
+			nodes_outer[1] = []int{m.N1, m.N2, m.SN1, m.SN2}
+		}
+		indexes_inner[0] = utils.IndexesOf(order[m.Cycle], nodes_inner[0]) // znajdź indeksy w cyklu
+		indexes_inner[1] = utils.IndexesOf(order[m.Cycle], nodes_inner[1]) // znajdź indeksy w cyklu
+		indexes_outer[0] = utils.IndexesOf(order[m.Cycle], nodes_outer[0]) // znajdź indeksy w cyklu
+		indexes_outer[1] = utils.IndexesOf(order[m.Cycle], nodes_outer[1]) // znajdź indeksy w cyklu
+		// if len(indexes) != 2 {
+		// 	panic("MoveEdgeDetail: indexes not found")
+		// }
+
+	}
+
+	for c, no := range nodes_outer {
+		for z, n1 := range no {
+			i := indexes_outer[c][z] // indeks w cyklu
+
+			cycle := c
 			other_cycle := int(math.Abs(float64(cycle - 1))) // drugi cykl
 			bi := utils.ElemBefore(order[cycle], i)          // wierzchołek przed i w cyklu 1
 			ai := utils.ElemAfter(order[cycle], i)           // wierzchołek po i w cyklu 1
@@ -368,9 +387,9 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 					distance_matrix[ai][n1] - distance_matrix[aj][n2] // dystansy po zamianie krawędzi
 				if delta < 0 {
 					// dodaj ruch do listy
-					if n1 == n2 || ai == aj { // jeśli nie można zamienić krawędzi
-						panic("FindNewMoves: n1 == n2")
-					}
+					// if n1 == n2 || ai == aj { // jeśli nie można zamienić krawędzi
+					// 	panic("FindNewMoves: n1 == n2")
+					// }
 					if cycle == 0 {
 						moves_node = append(moves_node, SwapMoveDetail{
 							N1:    n1,
@@ -398,37 +417,22 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 				new_moves = append(new_moves, &moves_node[move])
 			}
 		}
-	case *MoveEdgeDetail:
-		// fmt.Println("MoveEdge")
-		// nowe krawędzie: N1 - N2, SN1 - SN2, usunięcie krawędzi N1 - SN1, N2 - SN2
-		nodes := []int{m.N1, m.SN1}                       // wierzchołki do rozważenia przy nowych krawędziach, bierzemy pod uwagę nowe krawędzie N1-N2, SN1-SN2
-		indexes := utils.IndexesOf(order[m.Cycle], nodes) // znajdź indeksy w cyklu
-		if len(indexes) != 2 {
-			panic("MoveEdgeDetail: indexes not found")
-		}
+	}
 
-		for n := range nodes {
-			n1 := nodes[n]                                              // wierzchołek 1
-			i := indexes[n]                                             // indeks w cyklu
-			ai := utils.ElemAfter(order[m.Cycle], i)                    // wierzchołek po i w cyklu
-			bi := utils.ElemBefore(order[m.Cycle], i)                   // wierzchołek przed i w cyklu
-			if ai != m.N2 && ai != m.SN2 && bi != m.N2 && bi != m.SN2 { // jeśli nie jest to wierzchołek po N1 lub N2
-				// fmt.Println(move)
-				// fmt.Println("n1, i, ai, m.N2, m.SN2", n1, i, ai, m.N2, m.SN2)
-				// fmt.Println("m.N1, m.N2, m.SN1, m.SN2", m.N1, m.N2, m.SN1, m.SN2)
-				// fmt.Println("bi", utils.ElemBefore(order[m.Cycle], i))
-				// fmt.Println("delta", m.Delta)
-				// fmt.Println("order", order[m.Cycle])
-				panic("MoveEdgeDetail: node not in move")
-			}
+	for c, ni := range nodes_inner {
+		for n := range ni {
+			n1 := ni[n]                        // wierzchołek 1
+			i := indexes_inner[c][n]           // indeks w cyklu
+			ai := utils.ElemAfter(order[c], i) // wierzchołek po i w cyklu
+
 			moves_node := []MoveEdgeDetail{} // aktualnie dostępne ruchy
 
-			for j := 0; j < len(order[m.Cycle]); j++ {
-				n2 := order[m.Cycle][j]
+			for j := 0; j < len(order[c]); j++ {
+				n2 := order[c][j]
 				if n2 == n1 {
 					continue
 				}
-				aj := utils.ElemAfter(order[m.Cycle], j)
+				aj := utils.ElemAfter(order[c], j)
 
 				delta = distance_matrix[n1][n2] + distance_matrix[ai][aj] - // dystansy po zamianie krawędzi
 					distance_matrix[ai][n1] - distance_matrix[aj][n2] // dystansy przed zamianą krawędzi
@@ -439,7 +443,7 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 						SN1:   ai,
 						SN2:   aj,
 						Delta: delta,
-						Cycle: m.Cycle,
+						Cycle: c,
 					})
 					moves_node = append(moves_node, MoveEdgeDetail{ // krawędź w drugą stronę
 						N1:    ai,
@@ -447,7 +451,7 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 						SN1:   n1,
 						SN2:   n2,
 						Delta: delta,
-						Cycle: m.Cycle,
+						Cycle: c,
 					})
 				}
 
@@ -462,15 +466,38 @@ func FindNewMoves(distance_matrix [][]int, order [][]int, move Move) ([]Move, er
 }
 
 func AddNewMoves(s []Move, new_moves []Move) []Move {
-	for _, move := range new_moves {
-		s = AddSorted(s, move)
+	if len(new_moves) == 0 {
+		return s
 	}
-	return s
+
+	// sortowanie new_moves po delcie
+	sort.Slice(new_moves, func(i, j int) bool {
+		return new_moves[i].GetDelta() < new_moves[j].GetDelta()
+	})
+
+	result := make([]Move, 0, len(s)+len(new_moves))
+	i, j := 0, 0
+
+	for i < len(s) && j < len(new_moves) {
+		if s[i].GetDelta() < new_moves[j].GetDelta() { // stare lepsze
+			result = append(result, s[i])
+			i++
+		} else { // nowe lepsze
+			result = append(result, new_moves[j])
+			j++
+		}
+	}
+
+	// pozostałr ruchu po wypełnieniu 1 z list
+	result = append(result, s[i:]...)
+	result = append(result, new_moves[j:]...)
+
+	return result
 }
 
 func AddSorted(s []Move, move Move) []Move {
 	for i, v := range s {
-		if move.GetDelta() < v.GetDelta() {
+		if move.GetDelta() <= v.GetDelta() {
 			s = utils.Insert(s, i, move) // dodaj ruch w odpowiednie miejsce
 			return s
 		}

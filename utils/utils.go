@@ -231,35 +231,35 @@ func NearestNode(nodes []reader.Node, distance_matrix [][]int, node int, visited
 	return
 }
 
-func IndexBefore(arr []int, i int) int {
+func IndexBefore[T comparable](arr []T, i int) int {
 	if i == 0 {
 		return len(arr) - 1
 	}
 	return i - 1
 }
 
-func IndexAfter(arr []int, i int) int {
+func IndexAfter[T comparable](arr []T, i int) int {
 	if i == len(arr)-1 {
 		return 0
 	}
 	return i + 1
 }
 
-func ElemBefore(arr []int, i int) int {
+func ElemBefore[T comparable](arr []T, i int) T {
 	if i == 0 {
 		return arr[len(arr)-1]
 	}
 	return arr[i-1]
 }
 
-func ElemAfter(arr []int, i int) int {
+func ElemAfter[T comparable](arr []T, i int) T {
 	if i == len(arr)-1 {
 		return arr[0]
 	}
 	return arr[i+1]
 }
 
-func IndexOf(arr []int, value int) int {
+func IndexOf[T comparable](arr []T, value T) int {
 	for i, v := range arr {
 		if v == value {
 			return i
@@ -268,7 +268,7 @@ func IndexOf(arr []int, value int) int {
 	return -1
 }
 
-func IndexesOf(arr []int, values []int) []int {
+func IndexesOf[T comparable](arr []T, values []T) []int {
 	var indexes []int
 	for _, value := range values {
 		for i, v := range arr {
