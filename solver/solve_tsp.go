@@ -1,9 +1,11 @@
 package solver
 
 import (
-    "IMO/reader"
+	"IMO/reader"
 	"IMO/utils"
+	"math"
 )
+
 // testowo jak może struktura wyglądać funkcji - paramtetry
 func InOrder(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	for i := range distance_matrix {
@@ -117,8 +119,8 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 					continue
 				}
 				for j := range cycle1 {
-					temp_cycle = utils.Insert(cycle1, j, i) 
-					cost = 0                               
+					temp_cycle = utils.Insert(cycle1, j, i)
+					cost = 0
 					for node_idx := range temp_cycle {
 						cost += distance_matrix[temp_cycle[node_idx]][temp_cycle[(node_idx+1)%len(temp_cycle)]]
 					}
@@ -163,7 +165,85 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 
 	return nil
 }
+func ContinueGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
+	var (
+		visited      []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków
+		cycle1       []int
+		cycle2       []int
+		new_cycle    []int
+		visit        int
+		cost         int
+		temp_cycle   []int
+		minimal_cost int
+	)
+	for i := range int(math.Max(float64(len(order[0])), float64(len(order[1])))) {
+		if i < len(order[0]) {
+			cycle1 = append(cycle1, order[0][i])
+			visited[order[0][i]] = true
+		}
+		if i < len(order[0]) {
+			cycle2 = append(cycle2, order[1][i])
+			visited[order[1][i]] = true
+		}
+	}
+	lenCycle1 := len(nodes) / 2
+	lenCycle2 := len(nodes) / 2
 
+	for len(cycle1) < lenCycle1 || len(cycle2) < lenCycle2 {
+		if len(cycle1) < lenCycle1 {
+			visit = -1
+			minimal_cost = -1
+			for i := range nodes {
+				if visited[i] {
+					continue
+				}
+				for j := range cycle1 {
+					temp_cycle = utils.Insert(cycle1, j, i)
+					cost = 0
+					for node_idx := range temp_cycle {
+						cost += distance_matrix[temp_cycle[node_idx]][temp_cycle[(node_idx+1)%len(temp_cycle)]]
+					}
+					if minimal_cost == -1 || cost < minimal_cost {
+						new_cycle = append(temp_cycle[:0:0], temp_cycle...)
+						minimal_cost = cost
+						visit = i
+					}
+				}
+			}
+
+			cycle1 = append(new_cycle[:0:0], new_cycle...)
+			visited[visit] = true
+
+		}
+		if len(cycle2) < lenCycle2 {
+			visit = -1
+			minimal_cost = -1
+			for i := range nodes {
+				if visited[i] {
+					continue
+				}
+				for j := range cycle2 {
+					temp_cycle = utils.Insert(cycle2, j, i)
+					cost = 0
+					for node_idx := range temp_cycle {
+						cost += distance_matrix[temp_cycle[node_idx]][temp_cycle[(node_idx+1)%len(temp_cycle)]]
+					}
+					if minimal_cost == -1 || cost < minimal_cost {
+						new_cycle = append(temp_cycle[:0:0], temp_cycle...)
+						minimal_cost = cost
+						visit = i
+					}
+				}
+			}
+			cycle2 = append(new_cycle[:0:0], new_cycle...)
+			visited[visit] = true
+		}
+	}
+	order[0] = cycle1
+	order[1] = cycle2
+
+	return nil
+}
 func Regret(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	start_node_1, start_node_2, _ := PickRandomNodes(nodes) // wybór startowych punktów
 
@@ -350,7 +430,7 @@ func BestNodes(cycle []int, distance_matrix [][]int, visited []bool) (int, int, 
 			continue
 		}
 		for j := range cycle {
-			temp_cycle := utils.Insert(cycle, j, i) 
+			temp_cycle := utils.Insert(cycle, j, i)
 			cost := utils.CalculateCycleLen(temp_cycle, distance_matrix)
 			if cost > second_worst_cost {
 				second_worst_cost = cost

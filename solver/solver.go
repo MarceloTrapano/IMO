@@ -75,8 +75,34 @@ func Local_search(start_order [][]int, algorithm string, distance_matrix [][]int
 	}
 	err := f(distance_matrix, order)
 	if err != nil {
-        return nil, err
-    }
+		return nil, err
+	}
+	return order, nil
+}
+
+func Local_search_alternatives(nodes []reader.Node, algorithm string, distance_matrix [][]int, num_of_iterations int) ([][]int, error) {
+	var (
+		order           [][]int = make([][]int, NumCycles)
+		nodes_cycle_one int
+	)
+	nodes_cycle_one = int(float64(len(distance_matrix)) * Split)
+	order[0] = make([]int, nodes_cycle_one)
+	order[1] = make([]int, len(nodes)-nodes_cycle_one)
+	var f func([][]int, [][]int, []reader.Node, int) error
+	switch algorithm {
+	case "msls":
+		f = MSLS
+	case "ils":
+		f = ILS
+	case "lns-ls":
+		f = LNSWithLS
+	case "lns":
+		f = LNSWithoutLS
+	}
+	err := f(distance_matrix, order, nodes, num_of_iterations)
+	if err != nil {
+		panic("Error")
+	}
 	return order, nil
 }
 

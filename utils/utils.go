@@ -297,3 +297,12 @@ func RemoveIndexes[T comparable](s []T, index []int) []T {
 	}
 	return ret
 }
+func Remove(slice []int, s int) []int {
+	return append(slice[:s], slice[s+1:]...)
+}
+
+func CopyCycles(dst [][]int, cycles [][]int) error{
+	copy(dst[0], cycles[0])
+	copy(dst[1], cycles[1])
+	return nil
+}

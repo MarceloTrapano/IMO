@@ -92,7 +92,7 @@ func main() {
 		times_milis = append(times_milis, float64(elapsed.Milliseconds()))
 	}
 	sum := 0.0
-	for _,i := range(times_milis){
+	for _, i := range times_milis {
 		sum += i
 	}
 	mean := sum / float64(len(times_milis))
