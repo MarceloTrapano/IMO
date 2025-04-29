@@ -2,6 +2,7 @@ package solver
 
 import (
 	"IMO/utils"
+	"math"
 	"sort"
 )
 
@@ -435,4 +436,211 @@ func AddSorted(s []Move, move Move) []Move {
 
 	s = append(s, move)
 	return s
+}
+
+type Pair[T comparable] struct {
+	A T
+	B T
+}
+
+func AllCandidateMoves(distance_matrix [][]int, order [][]int, candidates [][]int, which_cycle map[int]int) ([]Move, error) {
+	var (
+		delta           int                                               // zmiana długości cyklu po dodaniu krawędzi
+		moves_edge      []MoveEdgeDetail                                  // ruchy zamiany krawędzi
+		moves_swap      []SwapMoveDetail                                  // ruchy zamiany wierzchołków między cyklami
+		candidate_moves []Move                                            // wyszystkie ruchy
+		num_nodes       int              = len(distance_matrix)           // liczba wierzchołków
+		pairs           []Pair[int]                                       // pary wierzchołków/początek krawędzi do zamiany
+		nodeToIndex     []map[int]int    = make([]map[int]int, num_nodes) // mapa wierzchołków do indeksów
+	)
+	for i := range order {
+		nodeToIndex[i] = make(map[int]int, len(order[i]))
+		for j, n := range order[i] {
+			nodeToIndex[i][n] = j // mapa wierzchołków do indeksów
+		}
+	}
+
+	for i := 0; i < num_nodes; i++ {
+		cycle := which_cycle[i]                       // w którym cyklu jest dany wierzchołek
+		index_i := nodeToIndex[cycle][i]              // indeks i w cyklu
+		ai := utils.ElemAfter(order[cycle], index_i)  // wierzchołek po i w cyklu
+		bi := utils.ElemBefore(order[cycle], index_i) // wierzchołek przed i w cyklu
+
+		for _, candidate := range candidates[i] {
+			if candidate == ai || candidate == bi { // jeśli już sąsiedzi nie rozważamy
+				continue
+			}
+			cycle_candidate := which_cycle[candidate]                       // w którym cyklu jest dany wierzchołek
+			index_candidate := nodeToIndex[cycle_candidate][candidate]      // indeks kandydata w cyklu
+			aj := utils.ElemAfter(order[cycle_candidate], index_candidate)  // wierzchołek po candidate w cyklu
+			bj := utils.ElemBefore(order[cycle_candidate], index_candidate) // wierzchołek przed candidate w cyklu
+
+			if cycle == cycle_candidate { // jeśli w tym samym cyklu -> zamiana krawędzi
+				pairs = []Pair[int]{
+					{A: i, B: candidate},
+					{A: bi, B: bj},
+				} // wierchołki rozpoczynające krawędź do zamiany by otrzymać krawędź i-candidate
+
+				for _, pair := range pairs {
+					a, b := pair.A, pair.B
+					index_a, index_b := nodeToIndex[cycle_candidate][a], nodeToIndex[cycle_candidate][b] // indeksy w cyklu
+					aa := utils.ElemAfter(order[cycle], index_a)                                         // wierzchołek po a w cyklu
+					ab := utils.ElemAfter(order[cycle], index_b)                                         // wierzchołek po b w cyklu
+
+					delta = distance_matrix[a][b] + distance_matrix[aa][ab] - // dystansy po zamianie krawędzi
+						distance_matrix[a][aa] - distance_matrix[b][ab] // dystansy przed zamianą krawędzi
+
+					moves_edge = append(moves_edge, MoveEdgeDetail{
+						N1:    order[cycle][index_a],
+						N2:    order[cycle][index_b],
+						SN1:   aa,
+						SN2:   ab,
+						Delta: delta,
+						Cycle: cycle,
+					})
+				}
+			} else { // jeśli w różnych cyklach -> zamiana wierzchołków
+				if cycle == 0 { // pierwszy z pary cykl = 0
+					pairs = []Pair[int]{
+						{A: i, B: bj},
+						{A: i, B: aj},
+						{A: bi, B: candidate},
+						{A: ai, B: candidate},
+					} // pary wierzchołków do zamiany - wierzchołki obok tego z którym chcemy mieć krawędź
+				} else {
+					pairs = []Pair[int]{
+						{A: bj, B: i},
+						{A: aj, B: i},
+						{A: candidate, B: bi},
+						{A: candidate, B: ai},
+					} // pary wierzchołków do zamiany - wierzchołki obok tego z którym chcemy mieć krawędź
+				}
+
+				for _, pair := range pairs {
+					a, b := pair.A, pair.B
+					index_a, index_b := nodeToIndex[0][a], nodeToIndex[1][b] // indeksy w cyklu
+					aa := utils.ElemAfter(order[0], index_a)                 // wierzchołek po a w cyklu
+					ab := utils.ElemAfter(order[1], index_b)                 // wierzchołek po b w cyklu
+					ba := utils.ElemBefore(order[0], index_a)                // wierzchołek przed a w cyklu
+					bb := utils.ElemBefore(order[1], index_b)                // wierzchołek przed b w cyklu
+
+					delta = distance_matrix[ba][b] + distance_matrix[b][aa] + // dystansy od wierzchołków przed i po aktualnych po zamianie
+						distance_matrix[bb][a] + distance_matrix[a][ab] -
+						distance_matrix[ba][a] - distance_matrix[bb][b] - // dystansy przed zamianą krawędzi
+						distance_matrix[aa][a] - distance_matrix[ab][b] // dystansy po zamianie krawędzi
+
+					moves_swap = append(moves_swap, SwapMoveDetail{
+						N1:    a,
+						N2:    b,
+						SN1:   aa,
+						SN2:   ab,
+						PN1:   ba,
+						PN2:   bb,
+						Delta: delta,
+					})
+				}
+			}
+		}
+	}
+
+	for i := range moves_edge {
+		candidate_moves = append(candidate_moves, &moves_edge[i])
+	}
+	for i := range moves_swap {
+		candidate_moves = append(candidate_moves, &moves_swap[i])
+	}
+
+	return candidate_moves, nil
+}
+
+func CandidateSearch(distance_matrix [][]int, order [][]int) error {
+	var (
+		candidate_moves []Move      // aktualnie dostępne ruchy
+		candidates      [][]int     // numery wierzchołków kandydackich dla każdego wierzchołka
+		top_candidates  int         = 10
+		which_cycle     map[int]int // w którym cyklu jest dany wierzchołek
+	)
+
+	candidates = CalculateCandidates(distance_matrix, top_candidates) // obliczanie kandydatów
+	// inicjalizacja which_cycle
+	which_cycle = make(map[int]int)
+	for c := range order {
+		for i := range order[c] {
+			which_cycle[order[c][i]] = c // przypisanie cyklu do wierzchołka
+		}
+	}
+
+	var (
+		best_move       Move  = nil                                                // najlepszy ruch w iteracji
+		min_delta       int   = math.MaxInt                                        // minimalna zmiana długości cyklu
+		current_length1 int   = utils.CalculateCycleLen(order[0], distance_matrix) // akutalna długość cyklu 1
+		current_length2 int   = utils.CalculateCycleLen(order[1], distance_matrix) // akutalna długość cyklu 2
+		current_length  int   = current_length1 + current_length2
+		err             error = nil
+	)
+
+	for {
+		// ruchy pomiędzy cyklami
+		candidate_moves, err = AllCandidateMoves(distance_matrix, order, candidates, which_cycle) // wszystkie ruchy między cyklami
+		if err != nil {
+			return err
+		}
+
+		best_move, min_delta = FindBestMove(candidate_moves) // najlepszy ruch i minimalna zmiana długości cyklu
+
+		// koniec iteracji
+		if min_delta >= 0 { // jeśli nie znaleziono ruchu, który zmniejsza długość cyklu skończ przeszukiwanie
+			best_move = nil // ustaw najlepszy ruch na nil
+			break
+		}
+		// jeśli znaleziono ruch, to wykonaj go
+		best_move.ExecuteMove(order) // wykonaj najlepszy ruch
+
+		// aktualizacja which_cycle
+		bm, ok := best_move.(*SwapMoveDetail)
+		if ok { // jeśli ruch to zamiana wierzchołków
+			// zamień cykle
+			which_cycle[bm.N1] = 1 - which_cycle[bm.N1] // zamień cykle
+			which_cycle[bm.N2] = 1 - which_cycle[bm.N2] // zamień cykle
+		}
+
+		current_length = current_length + min_delta // aktualizuj długość cyklu
+		best_move, min_delta = nil, math.MaxInt     // ustaw najlepszy ruch na nil i delta MaxInt
+	}
+
+	return nil
+}
+
+func CalculateCandidates(distance_matrix [][]int, top_candidates int) (candidates [][]int) {
+	candidates = make([][]int, len(distance_matrix)) // numery wierzchołków kandydackich dla każdego wierzchołka
+
+	for i := 0; i < len(distance_matrix); i++ {
+		for j := 0; j < len(distance_matrix); j++ {
+			var (
+				c     int  // aktualny kandydat
+				k     int  // nr kandydata
+				added bool = false
+			)
+			if i == j {
+				continue
+			}
+
+			dist := distance_matrix[i][j] // dystans między i - aktualny wierzchołek, a j - potencjalny kandydat
+			for k, c = range candidates[i] {
+				if dist < distance_matrix[i][c] { // jeśli dystans mniejszy niż aktualny kandydat
+					added = true
+					candidates[i] = utils.Insert(candidates[i], k, j) // dodaj kandydata w odpowiednie miejsce
+					if len(candidates[i]) > top_candidates {          // jeśli za dużo kandydatów
+						candidates[i] = candidates[i][:top_candidates] // ogranicz do top_candidates
+					}
+					break
+				}
+			}
+			if !added && len(candidates[i]) < top_candidates { // jeśli nie dodano kandydata i nie ma wszystkich
+				candidates[i] = append(candidates[i], j) // dodaj kandydata na koniec
+			}
+		}
+	}
+
+	return
 }

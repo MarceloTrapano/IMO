@@ -23,7 +23,7 @@ type Solution struct {
 	Shortest_Time     float64       `json:"shortest time"`
 }
 
-// użycie: go run main.go <ścieżka_do_instancji> [algorytm]
+// użycie: go run main.go <ścieżka_do_instancji> [algorytm] [metoda przeszukiwania lokalnego]
 func main() {
 	var (
 		local_search string
@@ -130,5 +130,5 @@ func main() {
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("RES_NN_SE_100_kroA200.json", finalJson, 0644)
+	os.WriteFile("RES_Rand_SE_100_kroB200.json", finalJson, 0644)
 }
