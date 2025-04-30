@@ -80,7 +80,7 @@ func Local_search(start_order [][]int, algorithm string, distance_matrix [][]int
 	return order, nil
 }
 
-func Local_search_alternatives(nodes []reader.Node, algorithm string, distance_matrix [][]int, num_of_iterations int) ([][]int, error) {
+func Local_search_alternatives(nodes []reader.Node, algorithm string, distance_matrix [][]int, num_of_iterations int) ([][]int, int, error) {
 	var (
 		order           [][]int = make([][]int, NumCycles)
 		nodes_cycle_one int
@@ -88,7 +88,7 @@ func Local_search_alternatives(nodes []reader.Node, algorithm string, distance_m
 	nodes_cycle_one = int(float64(len(distance_matrix)) * Split)
 	order[0] = make([]int, nodes_cycle_one)
 	order[1] = make([]int, len(nodes)-nodes_cycle_one)
-	var f func([][]int, [][]int, []reader.Node, int) error
+	var f func([][]int, [][]int, []reader.Node, int) (int, error)
 	switch algorithm {
 	case "msls":
 		f = MSLS
@@ -99,11 +99,11 @@ func Local_search_alternatives(nodes []reader.Node, algorithm string, distance_m
 	case "lns":
 		f = LNSWithoutLS
 	}
-	err := f(distance_matrix, order, nodes, num_of_iterations)
+	iter, err := f(distance_matrix, order, nodes, num_of_iterations)
 	if err != nil {
 		panic("Error")
 	}
-	return order, nil
+	return order, iter, nil
 }
 
 func EucDist(a, b reader.Node) int {

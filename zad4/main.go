@@ -20,6 +20,7 @@ type Solution struct {
 	Times         []float64     `json:"times"`
 	Longest_Time  float64       `json:"longest time"`
 	Shortest_Time float64       `json:"shortest time"`
+	Iter          []int         `json:"iterations"`
 }
 
 // użycie: go run main.go <ścieżka_do_instancji> [algorytm]
@@ -65,6 +66,8 @@ func main() {
 	results[0] = make([]int, num_of_rep)
 	results[1] = make([]int, num_of_rep)
 	var (
+		iter          int
+		iterations    []int
 		best_order    [][]int
 		worst_order   [][]int
 		order         [][]int
@@ -79,7 +82,7 @@ func main() {
 	for i := 0; i < num_of_rep; i++ {
 		fmt.Printf("Trial: %d\n", i+1)
 		start_time = time.Now()
-		order, err = solver.Local_search_alternatives(nodes, algorithm, distance_matrix, num_of_iterations)
+		order, iter, err = solver.Local_search_alternatives(nodes, algorithm, distance_matrix, num_of_iterations)
 		elapsed = time.Since(start_time)
 		if err != nil {
 			fmt.Println(err)
@@ -110,6 +113,7 @@ func main() {
 		if elapsed < shortest_time {
 			shortest_time = elapsed
 		}
+		iterations = append(iterations, iter)
 		times = append(times, elapsed)
 		times_seconds = append(times_seconds, elapsed.Seconds())
 	}
@@ -118,9 +122,9 @@ func main() {
 	fmt.Printf("Longest time millis: %v\n", longest_time.Milliseconds())
 	fmt.Printf("Shortest time seconds: %v\n", shortest_time.Seconds()) // chyba to najlepiej - dodane do Solution
 
-	solution := Solution{Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes, Times: times_seconds, Longest_Time: longest_time.Seconds(), Shortest_Time: shortest_time.Seconds()}
+	solution := Solution{Iter: iterations, Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes, Times: times_seconds, Longest_Time: longest_time.Seconds(), Shortest_Time: shortest_time.Seconds()}
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
 
-	os.WriteFile("Res_RAND_C_KroB200.json", finalJson, 0644)
+	os.WriteFile("Res_RAND_ILS_KroB200.json", finalJson, 0644)
 }
