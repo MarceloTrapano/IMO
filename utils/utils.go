@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/rand"
 	"slices"
 )
 
@@ -301,8 +302,48 @@ func Remove(slice []int, s int) []int {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-func CopyCycles(dst [][]int, cycles [][]int) error{
+func CopyCycles(dst [][]int, cycles [][]int) error {
 	copy(dst[0], cycles[0])
 	copy(dst[1], cycles[1])
 	return nil
+}
+
+func IndexBetterInSortedArray(slice []int, value int) int {
+	// find the index where the value should be inserted
+	for i, v := range slice {
+		if v > value { // mniejsza długość cyklu od poprzedniego - wstawiamy
+			return i
+		}
+	}
+
+	return -1 // nie jest lepszy od żadnego elementu
+}
+
+func InsertRetainSize[T comparable](slice []T, value T, index int) {
+	// insert to index, push values further back and remove last value to retain size
+	if index < 0 || index >= len(slice) {
+		panic("index out of range")
+	}
+
+	copy(slice[index+1:], slice[index:len(slice)-1])
+	slice[index] = value
+}
+
+// func InsertSlice(slice)
+
+// func InsertSliceRetainSize[T comparable](slice []T, value T, index int) {
+
+// }
+
+// max_val non-inclusive
+func Pick2RandomValues(max_val int) (int, int, error) {
+	if max_val < 2 {
+		panic("max_val must be at least 2")
+	}
+	val1 := rand.Intn(max_val)
+	val2 := val1
+	for val1 == val2 {
+		val2 = rand.Intn(max_val)
+	}
+	return val1, val2, nil
 }
