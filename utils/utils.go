@@ -1,11 +1,11 @@
 package utils
 
 import (
+	"IMO/reader"
 	"bytes"
 	"fmt"
 	"math"
 	"slices"
-	"IMO/reader"
 )
 
 type Edge struct {
@@ -174,8 +174,8 @@ func MatrixMax(matrix [][]int) (int, int, int) {
 	return x, y, max
 }
 
-func Insert(array []int, i int, j int) []int {
-	var new_arr []int = make([]int, len(array)+1)
+func Insert[T comparable](array []T, i int, j T) []T {
+	var new_arr []T = make([]T, len(array)+1)
 	if i < 0 || i >= len(array) {
 		panic("Index out of range")
 	}
@@ -231,30 +231,78 @@ func NearestNode(nodes []reader.Node, distance_matrix [][]int, node int, visited
 	return
 }
 
-func IndexBefore(arr []int, i int) int {
+func IndexBefore[T comparable](arr []T, i int) int {
 	if i == 0 {
 		return len(arr) - 1
 	}
 	return i - 1
 }
 
-func IndexAfter(arr []int, i int) int {
+func IndexAfter[T comparable](arr []T, i int) int {
 	if i == len(arr)-1 {
 		return 0
 	}
 	return i + 1
 }
 
-func ElemBefore(arr []int, i int) int {
+func ElemBefore[T comparable](arr []T, i int) T {
 	if i == 0 {
 		return arr[len(arr)-1]
 	}
 	return arr[i-1]
 }
 
-func ElemAfter(arr []int, i int) int {
+func ElemAfter[T comparable](arr []T, i int) T {
 	if i == len(arr)-1 {
 		return arr[0]
 	}
 	return arr[i+1]
+}
+
+func IndexOf[T comparable](arr []T, value T) int {
+	for i, v := range arr {
+		if v == value {
+			return i
+		}
+	}
+	return -1
+}
+
+func IndexesOf[T comparable](arr []T, values []T) []int {
+	var indexes []int
+	for _, value := range values {
+		for i, v := range arr {
+			if v == value {
+				indexes = append(indexes, i)
+				break
+			}
+		}
+	}
+	return indexes
+}
+
+type Empty struct{}
+
+func RemoveIndexes[T comparable](s []T, index []int) []T {
+	indexSet := make(map[int]Empty, len(index))
+	for _, idx := range index {
+		indexSet[idx] = Empty{}
+	}
+
+	ret := make([]T, 0, len(s)-len(index)) // prealokacja
+	for i, v := range s {
+		if _, found := indexSet[i]; !found { // tylko sprawdzenie czy nie ma w mapie
+			ret = append(ret, v)
+		}
+	}
+	return ret
+}
+func Remove(slice []int, s int) []int {
+	return append(slice[:s], slice[s+1:]...)
+}
+
+func CopyCycles(dst [][]int, cycles [][]int) error{
+	copy(dst[0], cycles[0])
+	copy(dst[1], cycles[1])
+	return nil
 }
