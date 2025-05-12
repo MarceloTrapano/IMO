@@ -28,7 +28,7 @@ func main() {
 	var (
 		heuristic_algorithm    string = "rand"
 		local_search_algorithm string = "se"
-		time_limit             int
+		time_limit             int    = 1000
 		use_local_search       bool
 		population_size        int = 20
 	)
@@ -66,7 +66,7 @@ func main() {
 		times           []time.Duration
 		times_seconds   []float64
 	)
-	num_of_rep := 10
+	num_of_rep := 1
 	for i := range distance_matrix {
 		distance_matrix[i] = make([]int, len(nodes))
 		for j := range distance_matrix[i] {
@@ -94,10 +94,6 @@ func main() {
 		start_time = time.Now()
 		order, iter, err = solver.HAE(nodes, distance_matrix, time_limit, heuristic_algorithm, local_search_algorithm, use_local_search, population_size)
 		elapsed = time.Since(start_time)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -135,6 +131,10 @@ func main() {
 	solution := Solution{Iter: iterations, Result: results, Worst_Order: worst_order, Best_Order: best_order, Nodes: nodes, Times: times_seconds, Longest_Time: longest_time.Seconds(), Shortest_Time: shortest_time.Seconds()}
 
 	finalJson, _ := json.MarshalIndent(solution, "", "\t")
+	fmt.Println(results)
+	fmt.Println("Best score: ", best_score)
+	fmt.Println("Worst score: ", worst_score)
 
-	os.WriteFile("Res_RAND_ILS_KroB200.json", finalJson, 0644)
+	// os.WriteFile("Res_RAND_ILS_KroB200.json", finalJson, 0644)
+	os.WriteFile("HAE.json", finalJson, 0644)
 }
