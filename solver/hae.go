@@ -129,14 +129,15 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 		node_in_chain = make([]bool, len(adjacency_crossed[i]))
 
 		// uzupełenienie nr_neighbors_node
-		for j := 0; j < len(adjacency_crossed[i]); j++ {
-			for k := 0; k < len(adjacency_crossed[i][j]); k++ {
-				if adjacency_crossed[i][j][k] {
-					nr_neighbors_node[j]++
-					neighbors_nodes[j] = append(neighbors_nodes[j], k) // dodanie sąsiada
+		matrix := adjacency_crossed[i]
+		for u, row := range matrix {
+			for v, connected := range row {
+				if connected {
+					nr_neighbors_node[u]++
+					neighbors_nodes[u] = append(neighbors_nodes[u], v)
 				}
 			}
-			nr_neighbors_count[nr_neighbors_node[j]]++
+			nr_neighbors_count[nr_neighbors_node[u]]++
 		}
 
 		if nr_neighbors_count[1] == 0 { // ten sam cykl w obu rodzicach
@@ -162,16 +163,14 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 					if nr_neighbors_node[neighbor] == 1 {
 						// koniec łańcucha
 						break
-					} else {
-						// dodanie sąsiada do łańcucha
-						if neighbors_nodes[neighbor][0] == previous {
-							previous = neighbor
-							neighbor = neighbors_nodes[neighbor][1]
-						} else {
-							previous = neighbor
-							neighbor = neighbors_nodes[neighbor][0]
-						}
 					}
+					// dodanie sąsiada do łańcucha
+					if neighbors_nodes[neighbor][0] == previous {
+						previous, neighbor = neighbor, neighbors_nodes[neighbor][1]
+					} else {
+						previous, neighbor = neighbor, neighbors_nodes[neighbor][0]
+					}
+
 				}
 				chains = append(chains, chain) // dodanie łańcucha do listy łańcuchów
 			}
@@ -187,61 +186,41 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 			zero_end := false
 			join_end := false
 			for j := 1; j < len(chains); j++ {
-				// sprawdzenie odległości między końcem a początkiem
+				// sprawdzenie odległości między początkiem/końcem chain 0 a początkiem/końcem chain j
 				distance_start_start := distance_matrix[start][chains[j][0]]
 				distance_end_start := distance_matrix[end][chains[j][0]]
 				distance_start_end := distance_matrix[start][chains[j][len(chains[j])-1]]
 				distance_end_end := distance_matrix[end][chains[j][len(chains[j])-1]]
 
 				// wszystkie możliwości po kolei O(n) a nie O(log(n)) jakby można zrobić ale tylko 4 przypadki więc spoko
-				if distance_start_end < min_distance {
-					min_distance = distance_start_end
-					min_index = j
-					join_end = true
-					zero_end = false
+				update := func(d, idx int, je, ze bool) {
+					if d < min_distance {
+						min_distance = d
+						min_index = idx
+						join_end = je
+						zero_end = ze
+					}
 				}
-				if distance_end_start < min_distance {
-					min_distance = distance_end_start
-					min_index = j
-					join_end = false
-					zero_end = true
-				}
-				if distance_start_start < min_distance {
-					min_distance = distance_start_start
-					min_index = j
-					join_end = false
-					zero_end = false
-				}
-				if distance_end_end < min_distance {
-					min_distance = distance_end_end
-					min_index = j
-					join_end = true
-					zero_end = true
-				}
+				update(distance_start_end, j, true, false)
+				update(distance_end_start, j, false, true)
+				update(distance_start_start, j, false, false)
+				update(distance_end_end, j, true, true)
 			}
 
 			if min_index == -1 {
 				return nil, fmt.Errorf("błąd: nie znaleziono indeksu")
 			}
-			if zero_end {
+			if !zero_end {
 				// odwróć chain 0
-				temp_chain := make([]int, 0)
-				for j := len(chains[0]) - 1; j >= 0; j-- {
-					temp_chain = append(temp_chain, chains[0][j])
-				}
-				chains[0] = temp_chain
+				utils.Reverse(chains[0])
 			}
 			// dodanie do cyklu
 			if join_end {
-				// dodaj do chaina 0 elementy chaina min_index zaczynając od końca
-				for j := len(chains[min_index]) - 1; j >= 0; j-- {
-					chains[0] = append(chains[0], chains[min_index][j])
-				}
+				// odwróć chain min_index
+				utils.Reverse(chains[min_index])
 			}
-			if !join_end {
-				// dodaj do chaina 0 elementy chaina min_index zaczynając od początku
-				chains[0] = append(chains[0], chains[min_index]...)
-			}
+			chains[0] = append(chains[0], chains[min_index]...)
+
 			// usunięcie chaina min_index
 			chains = append(chains[:min_index], chains[min_index+1:]...)
 		}
