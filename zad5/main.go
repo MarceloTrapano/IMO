@@ -136,5 +136,5 @@ func main() {
 	fmt.Println("Worst score: ", worst_score)
 
 	// os.WriteFile("Res_RAND_ILS_KroB200.json", finalJson, 0644)
-	os.WriteFile("HAE.json", finalJson, 0644)
+	os.WriteFile("Res_HAE_NoLS_KroB200.json", finalJson, 0644)
 }

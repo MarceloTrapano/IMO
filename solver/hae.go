@@ -113,26 +113,21 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 	}
 
 	var node_in_chain []bool
-	// var unordered_nodes []int // wierzchołki nieprzypisane do żadnego cyklu
+
 	// iteracja po cyklach
 	for i := 0; i < len(adjacency_crossed); i++ {
-		// fmt.Println("i: ", i)
 		var (
-			// unordered_nodes []int   // wierzchołki nieprzypisane do żadnego cyklu
-			chains [][]int // łańcuchy
-			// node_in_chain   []bool
-			// nodes_in_chain     []int
+			chains             [][]int // łańcuchy
 			nr_neighbors_node  []int   // liczba sąsiadów
 			neighbors_nodes    [][]int // sąsiedzi
 			nr_neighbors_count map[int]int
 		)
-		// nodes_in_chain = make([]int, 0)
 		nr_neighbors_node = make([]int, len(adjacency_crossed[i]))
 		nr_neighbors_count = make(map[int]int)
 		neighbors_nodes = make([][]int, len(adjacency_crossed[i]))
 		chains = make([][]int, 0)
 		node_in_chain = make([]bool, len(adjacency_crossed[i]))
-		// fmt.Println("ehe")
+
 		// uzupełenienie nr_neighbors_node
 		for j := 0; j < len(adjacency_crossed[i]); j++ {
 			for k := 0; k < len(adjacency_crossed[i][j]); k++ {
@@ -143,24 +138,18 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 			}
 			nr_neighbors_count[nr_neighbors_node[j]]++
 		}
-		// fmt.Println("ehe2")
-		// fmt.Println("nr_neighbors_count: ", nr_neighbors_count)
-		if nr_neighbors_count[1] == 0 {
-			// ten sam cykl w obu rodzicach
-			// fmt.Println("ten sam cykl w obu rodzicach")
-			// chains[0] = p1[i]
+
+		if nr_neighbors_count[1] == 0 { // ten sam cykl w obu rodzicach
 			copy(crossed_order[i], p1[i])
 			continue
 		}
+
 		// łączenie łańcuchów
 		for j := 0; j < len(adjacency_crossed[i]); j++ {
 			if node_in_chain[j] {
 				continue // jeśli wierzchołek już w łańcuchu to pomiń
 			}
 			if nr_neighbors_node[j] == 1 { // 1 sąsiad
-				if len(neighbors_nodes[j]) != 1 {
-					panic("błąd: niepoprawna liczba sąsiadów")
-				}
 				chain := make([]int, 0)
 				chain = append(chain, j) // dodanie wierzchołka do łańcucha
 				node_in_chain[j] = true
@@ -174,9 +163,6 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 						// koniec łańcucha
 						break
 					} else {
-						if nr_neighbors_node[neighbor] != 2 {
-							panic("błąd: niepoprawna liczba sąsiadów")
-						}
 						// dodanie sąsiada do łańcucha
 						if neighbors_nodes[neighbor][0] == previous {
 							previous = neighbor
@@ -190,30 +176,24 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 				chains = append(chains, chain) // dodanie łańcucha do listy łańcuchów
 			}
 		}
-		// fmt.Println("chains: ", chains)
-		// fmt.Println("ehe3")
 
 		// dopóki nie ma 1 chaina
 		for len(chains) > 1 {
 			// odległość między pierwszym a pozostałymi łańcuchami (koniec, początek) - branie minimum
 			// 2 wektory - koniec, początek do wszystkich wierzchołków w pozostałych łańcuchach, po iteracji kkoniec lub początek znowu minimum ze wszystkich pozostałych
-			if len(chains[0]) == 0 {
-				panic("xd")
-			}
 			start, end := chains[0][0], chains[0][len(chains[0])-1]
 			min_distance := math.MaxInt
 			min_index := -1
 			zero_end := false
 			join_end := false
 			for j := 1; j < len(chains); j++ {
-				if len(chains[j]) == 0 {
-					panic("xd")
-				}
 				// sprawdzenie odległości między końcem a początkiem
 				distance_start_start := distance_matrix[start][chains[j][0]]
 				distance_end_start := distance_matrix[end][chains[j][0]]
 				distance_start_end := distance_matrix[start][chains[j][len(chains[j])-1]]
 				distance_end_end := distance_matrix[end][chains[j][len(chains[j])-1]]
+
+				// wszystkie możliwości po kolei O(n) a nie O(log(n)) jakby można zrobić ale tylko 4 przypadki więc spoko
 				if distance_start_end < min_distance {
 					min_distance = distance_start_end
 					min_index = j
@@ -239,6 +219,7 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 					zero_end = true
 				}
 			}
+
 			if min_index == -1 {
 				return nil, fmt.Errorf("błąd: nie znaleziono indeksu")
 			}
@@ -264,48 +245,18 @@ func CrossOver(p1 [][]int, p2 [][]int, distance_matrix [][]int, nodes []reader.N
 			// usunięcie chaina min_index
 			chains = append(chains[:min_index], chains[min_index+1:]...)
 		}
-		// fmt.Println("ehe4")
-		// fmt.Println("end chains: ", chains)
-		// fmt.Println("Cycle nr ", i)
+
 		if len(chains) == 0 { // jeśli nie ma łańcuchów to nie ma cyklu - chyba niepotrzebny warunek
-			// fmt.Println("nie ma łańcucha, i: ", i)
-			// sum_adjacency := 0
-			// for j := 0; j < len(adjacency_crossed[i]); j++ {
-			// 	for k := 0; k < len(adjacency_crossed[i][j]); k++ {
-			// 		if adjacency_crossed[i][j][k] {
-			// 			sum_adjacency++
-			// 		}
-			// 	}
-			// }
-			// if sum_adjacency > 0 {
-			// 	fmt.Println("sum_adjacency: ", sum_adjacency)
-			// 	fmt.Println(chains)
-			// 	panic("sum_adjacency > 0, a nie ma łańcuchów")
-			// }
 			continue
 		}
 		crossed_order[i] = append(crossed_order[i], chains[0]...) // dodanie cyklu do crossed_order
 	}
-	// // unordered_nodes na podstawie node_in_chain
-	// for j := 0; j < len(node_in_chain); j++ {
-	// 	if !node_in_chain[j] {
-	// 		unordered_nodes = append(unordered_nodes, j) // dodanie wierzchołka do listy nieprzypisanych
-	// 	}
-	// }
-	// unordered_nodes, crossed_order
-	// fmt.Println("unordered_nodes: ", unordered_nodes)
-	// for i := 0; i < len(crossed_order); i++ {
-	// 	fmt.Println("len crossed_order["+strconv.Itoa(i)+"]: ", len(crossed_order[i]))
-	// 	fmt.Println("crossed_order["+strconv.Itoa(i)+"]: ", crossed_order[i])
-	// }
-	err := Repair(crossed_order, distance_matrix, nodes) // naprawa cyklu
+
+	// naprawa cyklu
+	err := Repair(crossed_order, distance_matrix, nodes)
 	if err != nil {
 		return nil, err
 	}
-	// for i := 0; i < len(crossed_order); i++ {
-	// 	fmt.Println("len crossed_order["+strconv.Itoa(i)+"]: ", len(crossed_order[i]))
-	// 	fmt.Println("crossed_order["+strconv.Itoa(i)+"]: ", crossed_order[i])
-	// }
 
 	return crossed_order, nil
 }
@@ -344,7 +295,6 @@ func HAEWithoutLS(distance_matrix [][]int, order [][]int, nodes []reader.Node, t
 		}
 		used_parents[key] = utils.Empty{}
 		num_used_parents++
-		// fmt.Println("num_used_parents: ", num_used_parents)
 
 		// krzyżowanie rodziców
 		new_order, err := CrossOver(p1, p2, distance_matrix, nodes)
@@ -359,19 +309,11 @@ func HAEWithoutLS(distance_matrix [][]int, order [][]int, nodes []reader.Node, t
 			index_better := utils.IndexBetterInSortedArray(population_cycles_len, len_new_order)
 			if prev_index := index_better - 1; prev_index >= 0 && len_new_order == population_cycles_len[prev_index] {
 				exists = true
-				// fmt.Println("to samo rozwiązanie, nie dodano do populacji")
 			}
 			if !exists {
 				utils.InsertRetainSize(population_cycles_len, len_new_order, index_better)
 				utils.InsertRetainSize(population, new_order, index_better)
 
-				fmt.Println("Dodano nowy cykl: ", len(population_cycles_len), len(population))
-				// fmt.Println("populacja: ", population)
-				// fmt.Println("populacja_cycles_len: ", population_cycles_len)
-				if index_better == 0 {
-					fmt.Println("Nowy najlepszy cykl")
-					fmt.Println("populacja_cycles_len: ", population_cycles_len)
-				}
 				used_parents = make(map[string]utils.Empty) // reset mapy użytych rodziców
 				num_used_parents = 0
 			}
@@ -385,10 +327,6 @@ func HAEWithoutLS(distance_matrix [][]int, order [][]int, nodes []reader.Node, t
 		iter++
 	}
 
-	fmt.Println("Iteracje: ", iter)
-	fmt.Println("Czas: ", elapsed)
-	fmt.Println(population_cycles_len)
-	fmt.Println()
 	utils.CopyCycles(order, population[0]) // kopiowanie najlepszego rozwiązania do order
 	return iter, nil
 }
@@ -427,7 +365,6 @@ func HAEWithLS(distance_matrix [][]int, order [][]int, nodes []reader.Node, time
 		}
 		used_parents[key] = utils.Empty{}
 		num_used_parents++
-		// fmt.Println("num_used_parents: ", num_used_parents)
 
 		// krzyżowanie rodziców
 		new_order, err := CrossOver(p1, p2, distance_matrix, nodes)
@@ -447,19 +384,11 @@ func HAEWithLS(distance_matrix [][]int, order [][]int, nodes []reader.Node, time
 			index_better := utils.IndexBetterInSortedArray(population_cycles_len, len_new_order)
 			if prev_index := index_better - 1; prev_index >= 0 && len_new_order == population_cycles_len[prev_index] {
 				exists = true
-				// fmt.Println("to samo rozwiązanie, nie dodano do populacji")
 			}
 			if !exists {
 				utils.InsertRetainSize(population_cycles_len, len_new_order, index_better)
 				utils.InsertRetainSize(population, new_order, index_better)
 
-				fmt.Println("Dodano nowy cykl: ", len(population_cycles_len), len(population))
-				// fmt.Println("populacja: ", population)
-				// fmt.Println("populacja_cycles_len: ", population_cycles_len)
-				if index_better == 0 {
-					fmt.Println("Nowy najlepszy cykl")
-					fmt.Println("populacja_cycles_len: ", population_cycles_len)
-				}
 				used_parents = make(map[string]utils.Empty) // reset mapy użytych rodziców
 				num_used_parents = 0
 			}
@@ -473,10 +402,6 @@ func HAEWithLS(distance_matrix [][]int, order [][]int, nodes []reader.Node, time
 		iter++
 	}
 
-	fmt.Println("Iteracje: ", iter)
-	fmt.Println("Czas: ", elapsed)
-	fmt.Println(population_cycles_len)
-	fmt.Println()
 	utils.CopyCycles(order, population[0]) // kopiowanie najlepszego rozwiązania do order
 	return iter, nil
 }
