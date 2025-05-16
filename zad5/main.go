@@ -28,9 +28,9 @@ func main() {
 	var (
 		heuristic_algorithm    string = "rand"
 		local_search_algorithm string = "se"
-		time_limit             int    = 1000
-		use_local_search       bool
-		population_size        int = 20
+		time_limit             int    = 65550 // 65.55s - kroB średni czas MSLS
+		use_local_search       bool   = false
+		population_size        int    = 20
 	)
 	args := os.Args[1:]
 	if len(args) == 0 {

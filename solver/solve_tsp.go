@@ -4,6 +4,7 @@ import (
 	"IMO/reader"
 	"IMO/utils"
 	"math"
+	"math/rand"
 )
 
 // testowo jak może struktura wyglądać funkcji - paramtetry
@@ -181,13 +182,33 @@ func ContinueGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.
 			cycle1 = append(cycle1, order[0][i])
 			visited[order[0][i]] = true
 		}
-		if i < len(order[0]) {
+		if i < len(order[1]) {
 			cycle2 = append(cycle2, order[1][i])
 			visited[order[1][i]] = true
 		}
 	}
 	lenCycle1 := len(nodes) / 2
 	lenCycle2 := len(nodes) / 2
+
+	// gdy w cyklu nie ma wierzchołków dodaj losowy z nieodwiedzonych
+	for len(cycle1) == 0 {
+		// wylosuj wierzchołek do cyklu
+		rand_idx := rand.Intn(len(nodes))
+		if visited[rand_idx] {
+			continue
+		}
+		cycle1 = append(cycle1, rand_idx)
+		visited[rand_idx] = true
+	}
+	for len(cycle2) == 0 {
+		// wylosuj wierzchołek do cyklu
+		rand_idx := rand.Intn(len(nodes))
+		if visited[rand_idx] {
+			continue
+		}
+		cycle2 = append(cycle2, rand_idx)
+		visited[rand_idx] = true
+	}
 
 	for len(cycle1) < lenCycle1 || len(cycle2) < lenCycle2 {
 		if len(cycle1) < lenCycle1 {
