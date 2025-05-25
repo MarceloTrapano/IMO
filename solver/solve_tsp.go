@@ -3,6 +3,7 @@ package solver
 import (
 	"IMO/reader"
 	"IMO/utils"
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -88,6 +89,52 @@ func NearestNeighbour(distance_matrix [][]int, order [][]int, nodes []reader.Nod
 	return nil
 }
 
+func SingleNearestNeighbour(distance_matrix [][]int, order []int) error {
+	n := len(order)
+	if n == 0 {
+		return nil
+	}
+
+	// Utwórz kopię dostępnych wierzchołków (oryginalna kolejność)
+	candidates := make([]int, n)
+	copy(candidates, order)
+
+	visited := make([]bool, len(distance_matrix))
+	result := make([]int, 0, n)
+
+	start := candidates[0]
+	visited[start] = true
+	result = append(result, start)
+
+	for len(result) < n {
+		prev := result[len(result)-1]
+		minDist := -1
+		next := -1
+
+		for _, candidate := range candidates {
+			if visited[candidate] {
+				continue
+			}
+			dist := distance_matrix[prev][candidate]
+			if minDist == -1 || dist < minDist {
+				minDist = dist
+				next = candidate
+			}
+		}
+
+		if next == -1 {
+			panic("Brak nieodwiedzonych wierzchołków — coś poszło nie tak z listą `order`")
+		}
+
+		visited[next] = true
+		result = append(result, next)
+	}
+
+	copy(order, result)
+
+	return nil
+}
+
 func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	start_node_1, start_node_2, _ := PickRandomNodes(nodes) // wybór startowych punktów
 
@@ -166,6 +213,58 @@ func GreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) er
 
 	return nil
 }
+
+func SingleGreedyCycle(distanceMatrix [][]int, order []int) error {
+	// na pojedynczym cyklu - dostępne wierzchołki są w tablicy order
+	n := len(order)
+	if n == 0 {
+		return fmt.Errorf("order is empty")
+	}
+
+	visited := make([]bool, n)
+	cycle := []int{}
+
+	startIdx := rand.Intn(n)
+	startNode := order[startIdx]
+	cycle = append(cycle, startNode)
+	visited[startIdx] = true
+
+	for len(cycle) < n {
+		minimalCost := -1
+		visit := -1
+		var newCycle []int
+
+		for i, node := range order {
+			if visited[i] {
+				continue
+			}
+			for j := range cycle {
+				tempCycle := utils.Insert(cycle, j, node)
+
+				cost := 0
+				for k := range tempCycle {
+					a := tempCycle[k]
+					b := tempCycle[(k+1)%len(tempCycle)]
+					cost += distanceMatrix[a][b]
+				}
+
+				if minimalCost == -1 || cost < minimalCost {
+					minimalCost = cost
+					newCycle = append([]int(nil), tempCycle...)
+					visit = i
+				}
+			}
+		}
+
+		cycle = append([]int(nil), newCycle...)
+		visited[visit] = true
+	}
+
+	copy(order, cycle)
+
+	return nil
+}
+
 func ContinueGreedyCycle(distance_matrix [][]int, order [][]int, nodes []reader.Node) error {
 	var (
 		visited      []bool = make([]bool, len(nodes)) // tablica dodanych wierzchołków

@@ -127,6 +127,41 @@ func HAE(nodes []reader.Node, distance_matrix [][]int, time_limit int, heuristic
 	return order, iter, nil
 }
 
+func CustomMethod(nodes []reader.Node, distance_matrix [][]int, time_limit int, heuristic_algorithm string, local_search_algorithm string, method string, parameters ...int) ([][]int, int, error) {
+	var (
+		order           [][]int = make([][]int, NumCycles)
+		nodes_cycle_one int
+	)
+	nodes_cycle_one = int(float64(len(distance_matrix)) * Split)
+	order[0] = make([]int, nodes_cycle_one)
+	order[1] = make([]int, len(nodes)-nodes_cycle_one)
+	var f func([][]int, [][]int, []reader.Node, int, string, string, ...int) (int, error)
+
+	switch method {
+	case "es-ls":
+		f = EqualSplitWithLS
+	case "es":
+		f = EqualSplitWithoutLS
+	case "es-hae":
+		f = EqualSplitStartHAE
+	case "es-hae-m":
+		f = EqualSplitStartHAEMutation
+	default:
+		return nil, 0, fmt.Errorf("unknown method: %s", method)
+	}
+	// if local_search {
+	// 	f = HAEWithLS
+	// } else {
+	// 	f = HAEWithoutLS
+	// }
+	// iter, err := f(distance_matrix, order, nodes, time_limit, heuristic_algorithm, local_search_algorithm, population_size)
+	iter, err := f(distance_matrix, order, nodes, time_limit, heuristic_algorithm, local_search_algorithm, parameters...)
+	if err != nil {
+		panic("Error")
+	}
+	return order, iter, nil
+}
+
 func EucDist(a, b reader.Node) int {
 	return int(
 		math.Round(
