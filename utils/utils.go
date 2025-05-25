@@ -366,3 +366,32 @@ func Reverse[T any](slice []T) {
 		slice[i], slice[j] = slice[j], slice[i]
 	}
 }
+
+func CloserNode(distance_matrix [][]int, a, b, c int) (int, int, error) { // diff is negative
+	// which is c closer to a or b
+	dist_ac := distance_matrix[a][c]
+	dist_bc := distance_matrix[b][c]
+	diff := dist_ac - dist_bc
+	if diff < 0 {
+		return 0, diff, nil
+	}
+	return 1, -diff, nil
+}
+
+func EvenCycles(cycles [][]int) { // zakładamy 2 cykle
+	// wyrównanie cykli przez dodanie ostatniego elementu z dłuższego cyklu do krótszego
+	len1 := len(cycles[0])
+	len2 := len(cycles[1])
+	for len1 < len2-1 {
+		cycles[0] = append(cycles[0], cycles[1][len2-1])
+		cycles[1] = cycles[1][:len2-1]
+		len1++
+		len2--
+	}
+	for len2 < len1-1 {
+		cycles[1] = append(cycles[1], cycles[0][len1-1])
+		cycles[0] = cycles[0][:len1-1]
+		len2++
+		len1--
+	}
+}
