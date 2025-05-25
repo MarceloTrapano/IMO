@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/rand"
 	"slices"
 )
 
@@ -174,7 +175,7 @@ func MatrixMax(matrix [][]int) (int, int, int) {
 	return x, y, max
 }
 
-func Insert[T comparable](array []T, i int, j T) []T {
+func Insert[T any](array []T, i int, j T) []T {
 	var new_arr []T = make([]T, len(array)+1)
 	if i < 0 || i >= len(array) {
 		panic("Index out of range")
@@ -231,28 +232,28 @@ func NearestNode(nodes []reader.Node, distance_matrix [][]int, node int, visited
 	return
 }
 
-func IndexBefore[T comparable](arr []T, i int) int {
+func IndexBefore[T any](arr []T, i int) int {
 	if i == 0 {
 		return len(arr) - 1
 	}
 	return i - 1
 }
 
-func IndexAfter[T comparable](arr []T, i int) int {
+func IndexAfter[T any](arr []T, i int) int {
 	if i == len(arr)-1 {
 		return 0
 	}
 	return i + 1
 }
 
-func ElemBefore[T comparable](arr []T, i int) T {
+func ElemBefore[T any](arr []T, i int) T {
 	if i == 0 {
 		return arr[len(arr)-1]
 	}
 	return arr[i-1]
 }
 
-func ElemAfter[T comparable](arr []T, i int) T {
+func ElemAfter[T any](arr []T, i int) T {
 	if i == len(arr)-1 {
 		return arr[0]
 	}
@@ -283,7 +284,7 @@ func IndexesOf[T comparable](arr []T, values []T) []int {
 
 type Empty struct{}
 
-func RemoveIndexes[T comparable](s []T, index []int) []T {
+func RemoveIndexes[T any](s []T, index []int) []T {
 	indexSet := make(map[int]Empty, len(index))
 	for _, idx := range index {
 		indexSet[idx] = Empty{}
@@ -301,8 +302,67 @@ func Remove(slice []int, s int) []int {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-func CopyCycles(dst [][]int, cycles [][]int) error{
+func CopyCycles(dst [][]int, cycles [][]int) error {
 	copy(dst[0], cycles[0])
 	copy(dst[1], cycles[1])
 	return nil
+}
+
+func IndexBetterInSortedArray(slice []int, value int) int {
+	// find the index where the value should be inserted
+	for i, v := range slice {
+		if v > value { // mniejsza długość cyklu od poprzedniego - wstawiamy
+			return i
+		}
+	}
+
+	return -1 // nie jest lepszy od żadnego elementu
+}
+
+func InsertRetainSize[T any](slice []T, value T, index int) {
+	// insert to index, push values further back and remove last value to retain size
+	if index < 0 || index >= len(slice) {
+		panic("index out of range")
+	}
+
+	copy(slice[index+1:], slice[index:len(slice)-1])
+	slice[index] = value
+}
+
+// max_val non-inclusive
+func Pick2RandomValues(max_val int) (int, int, error) {
+	if max_val < 2 {
+		panic("max_val must be at least 2")
+	}
+	val1 := rand.Intn(max_val)
+	val2 := val1
+	for val1 == val2 {
+		val2 = rand.Intn(max_val)
+	}
+	return val1, val2, nil
+}
+
+func MatrixLogicAND(a [][]bool, b [][]bool) [][]bool {
+	if len(a) != len(b) {
+		panic("Matrixes must be the same size")
+	}
+	for i := range a {
+		if len(a[i]) != len(b[i]) {
+			panic("Matrixes must be the same size")
+		}
+	}
+	result := make([][]bool, len(a))
+	for i := range a {
+		result[i] = make([]bool, len(a[i]))
+		for j := range a[i] {
+			result[i][j] = a[i][j] && b[i][j]
+		}
+	}
+	return result
+}
+
+func Reverse[T any](slice []T) {
+	for i, j := 0, len(slice)-1; i < j; i, j = i+1, j-1 {
+		slice[i], slice[j] = slice[j], slice[i]
+	}
 }
